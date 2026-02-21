@@ -4,7 +4,7 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Wshadow -MMD -MP -Iincludes
 SRCDIR = srcs
 ODIR = ofiles
 
-SRCS =
+-include docs/sources.mk
 SRC = $(addprefix $(SRCDIR)/,$(SRCS))
 OBJS = $(addprefix $(ODIR)/,$(notdir $(SRC:.cpp=.o)))
 DEPS = $(OBJS:.o=.d)
