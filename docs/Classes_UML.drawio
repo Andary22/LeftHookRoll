@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="k16Fzcdx39XlJRFOG0DX" name="Page-1">
-        <mxGraphModel dx="1636" dy="1603" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="2477" dy="2141" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -26,7 +26,7 @@
                 <mxCell id="_icx7SgpGI3Rs69wwPDM-146" value="&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;---identity---&lt;/div&gt;&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;- serverName: string&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;- IPPorts: &amp;lt;&amp;lt;vector&amp;gt;&amp;gt; sockaddr_in&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;-&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;---data---&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;&lt;span style=&quot;forced-color-adjust: none; box-shadow: none !important; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;- maxBodySize: size_t&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;&lt;span style=&quot;forced-color-adjust: none; box-shadow: none !important; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;- locations: &amp;lt;&amp;lt;vector&amp;gt;&amp;gt; Location&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;&lt;span style=&quot;forced-color-adjust: none; box-shadow: none !important; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;- errorPages: &amp;lt;&amp;lt;map&amp;gt;&amp;gt; string, string&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;forced-color-adjust: none; box-shadow: none !important;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;" style="text;whiteSpace=wrap;html=1;" parent="75" vertex="1">
                     <mxGeometry y="21.5" width="270" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="78" value="Location" style="swimlane;whiteSpace=wrap;html=1;strokeWidth=1;" parent="1" vertex="1">
+                <mxCell id="78" value="LocationConf" style="swimlane;whiteSpace=wrap;html=1;strokeWidth=1;" parent="1" vertex="1">
                     <mxGeometry x="655" y="256" width="320" height="201.5" as="geometry"/>
                 </mxCell>
                 <mxCell id="_icx7SgpGI3Rs69wwPDM-150" value="&lt;div&gt;&lt;div&gt;---identity---&lt;/div&gt;&lt;div&gt;- path: string&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;---data---&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;div&gt;- root: string&lt;/div&gt;&lt;/div&gt;&lt;div&gt;- methodName: &amp;lt;&amp;lt;vector&amp;gt;&amp;gt;&amp;nbsp;allowed_methods&lt;/div&gt;&lt;div&gt;- returnURL: string&lt;/div&gt;&lt;div&gt;- returnCode: string&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;- autoIndex: bool&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(204, 204, 204));&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;- defaultPage: string&lt;/div&gt;&lt;div&gt;- storageLocation: string&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=monospace;fontColor=light-dark(#000000,#CCCCCC);" parent="78" vertex="1">
@@ -83,7 +83,7 @@
                         <mxPoint y="4" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="x27H7X2PRdPtu6Iesld7-168" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" edge="1" source="145">
+                <mxCell id="x27H7X2PRdPtu6Iesld7-168" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="145" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="151" y="214"/>
@@ -176,10 +176,10 @@
                         <mxPoint y="1" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="147" style="edgeStyle=none;html=1;entryX=0.019;entryY=0.426;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="lXG-1Z4XPr_NT8uNeLTM-146" target="lXG-1Z4XPr_NT8uNeLTM-149">
+                <mxCell id="147" style="edgeStyle=none;html=1;entryX=0.019;entryY=0.426;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="lXG-1Z4XPr_NT8uNeLTM-146" target="lXG-1Z4XPr_NT8uNeLTM-149" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="148" value="has-a" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="147">
+                <mxCell id="148" value="has-a" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="147" vertex="1" connectable="0">
                     <mxGeometry x="0.0453" y="1" relative="1" as="geometry">
                         <mxPoint as="offset"/>
                     </mxGeometry>
