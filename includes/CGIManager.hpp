@@ -1,6 +1,6 @@
 /**
  * @file CGIManager.hpp
- * @brief Declares the CGIManager class responsible for executing CGI scripts and managing their input/output.
+ * @brief Declares the CGIManager class responsible for executing CGI scripts and redirecting their input/output.
  */
 #pragma once
 
