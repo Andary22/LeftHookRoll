@@ -54,11 +54,11 @@ class LocationConf
 		//  Identity
 		std::string	_path;
 		//  Data
-		std::string		 _root;							// Directory where the requested file should be located
-		AllowedMethods	_allowedMethods;		// Bitmap wrapper of accepted HTTP methods
-		std::string		 _returnURL;				 // Target URL for HTTP redirection
-		std::string		 _returnCode;				// HTTP status code for redirection (e.g., "301")
-		bool			_autoIndex;				 // Directory listing flag
-		std::string		 _defaultPage;			 // Default file to serve (e.g., "index.html")
-		std::string		 _storageLocation;	 // Directory where uploaded files are saved
+		std::string		 _root;				// Directory where the requested file should be located
+		AllowedMethods	_allowedMethods;	// Bitmap wrapper of accepted HTTP methods
+		std::string		 _returnURL;		// Target URL for HTTP redirection
+		std::string		 _returnCode;		// HTTP status code for redirection (e.g., "301")
+		bool			_autoIndex;			// Directory listing flag
+		std::string		 _defaultPage;		// Default file to serve (e.g., "index.html")
+		std::string		 _storageLocation;	// Directory where uploaded files are saved
 };
