@@ -5,6 +5,8 @@
 
 #pragma once
 
+#define MAX_HEADER_SIZE 8192
+
 #include <string>
 #include <ctime>
 #include <netinet/in.h>
