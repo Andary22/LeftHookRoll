@@ -10,6 +10,12 @@
 #include <vector>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sstream>
+#include <algorithm>
 
 #define FILEPREFIX "/tmp/lefthookroll_"
 #define BufferLimit 1024 * 1024

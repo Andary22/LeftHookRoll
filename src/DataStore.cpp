@@ -5,12 +5,7 @@
  */
 
 #include "../includes/DataStore.hpp"
-#include <errno.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sstream>
-#include <algorithm>
+
 
 namespace {
     /**
@@ -146,8 +141,9 @@ void DataStore::append(const char* data, size_t length) {
         }
 	}
     else {
-		write_all(_fileFd, data, length);
-		_currentSize += length;
+		if (write_all(_fileFd, data, length)) {
+			_currentSize += length;
+		}
 	}
 
 }
@@ -206,7 +202,6 @@ bool DataStore::_switchToFileMode() {
 
 	int fd = ::mkstemp(&pathBuffer[0]);
 	if (fd == -1) {
-        this->clear();
 		return false;
 	}
 
@@ -217,7 +212,6 @@ bool DataStore::_switchToFileMode() {
 		if (!write_all(fd, &_dataBuffer[0], _dataBuffer.size())) {
 			::close(fd);
 			_absolutePath.clear();
-            this->clear();
 			return false;
 		}
 		_dataBuffer.clear();
