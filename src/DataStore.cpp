@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sstream>
+#include <algorithm>
 
 namespace {
     /**
@@ -45,7 +46,7 @@ namespace {
                 if (errno == EINTR) continue;
                 return false;
             }
-            if (readBytes == 0) break;
+            if (readBytes == 0) return false;
 
             if (!write_all(dstFd, &buffer[0], static_cast<size_t>(readBytes))) {
                 return false;
@@ -205,6 +206,7 @@ bool DataStore::_switchToFileMode() {
 
 	int fd = ::mkstemp(&pathBuffer[0]);
 	if (fd == -1) {
+        this->clear();
 		return false;
 	}
 
@@ -215,6 +217,7 @@ bool DataStore::_switchToFileMode() {
 		if (!write_all(fd, &_dataBuffer[0], _dataBuffer.size())) {
 			::close(fd);
 			_absolutePath.clear();
+            this->clear();
 			return false;
 		}
 		_dataBuffer.clear();
@@ -229,9 +232,5 @@ bool DataStore::_switchToFileMode() {
  * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
      */
 std::string DataStore::_generateTempFileName() const {
-    static int file_cont = 0;
-
-    std::ostringstream ss;
-    ss << file_cont;
-    return std::string(FILEPREFIX) + ss.str();
+    return std::string(FILEPREFIX) + "XXXXXX"; 
 }
