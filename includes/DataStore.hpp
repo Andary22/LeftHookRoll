@@ -36,7 +36,7 @@ public:
     // Canonical Form
     DataStore();
     DataStore(const DataStore& other);
-    DataStore& operator=(const DataStore& other);
+    DataStore& operator=(DataStore other);
     ~DataStore();
 
     //  Core Behavior

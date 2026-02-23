@@ -74,39 +74,32 @@ DataStore::DataStore(const DataStore& other): _mode(RAM), _bufferLimit(other._bu
 	}
     else {
 		_mode = RAM;
-		_dataBuffer.clear();
-		_currentSize = other._currentSize;
-		_switchToFileMode();
-		if (_currentSize > 0) {
-			copy_fd_contents(other._absolutePath, _fileFd, _currentSize);
-		}
+        _dataBuffer.clear();
+        _currentSize = other._currentSize;
+        _switchToFileMode();
+        try {
+            if (_currentSize > 0) {
+                copy_fd_contents(other._absolutePath, _fileFd, _currentSize);
+            }
+        }
+        catch (...) {
+            if (_fileFd != -1) {
+                ::close(_fileFd);
+                _fileFd = -1;
+            }
+            throw; // Re-throw so the caller knows it failed!
+        }
 	}
 }
 
-DataStore& DataStore::operator=(const DataStore& other) {
-	if (this == &other) {
-		return *this;
-	}
-
-	clear();
-	_bufferLimit = other._bufferLimit;
-
-	if (other._mode == RAM) {
-		_mode = RAM;
-		_dataBuffer = other._dataBuffer;
-		_currentSize = other._currentSize;
-	}
-    else {
-		_mode = RAM;
-		_dataBuffer.clear();
-		_currentSize = other._currentSize;
-		_switchToFileMode();
-		if (_currentSize > 0) {
-			copy_fd_contents(other._absolutePath, _fileFd, _currentSize);
-		}
-	}
-
-	return *this;
+DataStore& DataStore::operator=(DataStore other) { 
+    std::swap(_mode, other._mode);
+    std::swap(_bufferLimit, other._bufferLimit);
+    std::swap(_currentSize, other._currentSize);
+    std::swap(_dataBuffer, other._dataBuffer);
+    std::swap(_fileFd, other._fileFd);
+    std::swap(_absolutePath, other._absolutePath);
+    return *this;
 }
 
 DataStore::~DataStore() {
@@ -192,9 +185,17 @@ void DataStore::_switchToFileMode() {
         return ;
     }
 
-    static int file_counter = 0;
     _generateTempFileName();
-    write_all(_fileFd, &_dataBuffer[0], _dataBuffer.size());
+    if (!_dataBuffer.empty()) {
+        try {
+            write_all(_fileFd, &_dataBuffer[0], _dataBuffer.size());
+        } catch (...) {
+            ::close(_fileFd);
+            _fileFd = -1;
+            _absolutePath.clear();
+            throw;
+        }
+    }
     _dataBuffer.clear();
     _mode = FILE_MODE;
 }
