@@ -1,7 +1,7 @@
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Wshadow -MMD -MP -Iincludes
 
-SRCDIR = src
+SRCDIR = srcs
 ODIR = ofiles
 
 -include docs/sources.mk
