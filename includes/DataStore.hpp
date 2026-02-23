@@ -18,7 +18,7 @@
 #include <algorithm>
 
 #define FILEPREFIX "/tmp/lefthookroll_"
-#define BufferLimit 1024 * 1024
+#define BUFFERLIMIT 1024 * 1024
 
 /**
  * @enum BufferMode
@@ -105,4 +105,14 @@ private:
      * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
      */
     std::string _generateTempFileName() const;
+
+    /**
+     * @brief Ensures all data is written to the file descriptor.
+     */
+    bool write_all(int fd, const char* data, size_t length);
+
+    /**
+     * @brief Copies data directly from one FD to another using a buffer.
+     */
+    bool DataStore::copy_fd_contents(int srcFd, int dstFd, size_t totalBytes);
 };

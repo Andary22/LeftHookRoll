@@ -7,54 +7,51 @@
 #include "../includes/DataStore.hpp"
 
 
-namespace {
-    /**
-     * @brief Ensures all data is written to the file descriptor.
-     */
-    bool write_all(int fd, const char* data, size_t length) {
-        size_t offset = 0;
-        while (offset < length) {
-            ssize_t written = ::write(fd, data + offset, length - offset);
-            if (written < 0) {
-                if (errno == EINTR) continue;
-                return false;
-            }
-            if (written == 0) return false;
-            offset += static_cast<size_t>(written);
+/**
+ * @brief Ensures all data is written to the file descriptor.
+ */
+bool DataStore::write_all(int fd, const char* data, size_t length) {
+    size_t offset = 0;
+    while (offset < length) {
+        ssize_t written = ::write(fd, data + offset, length - offset);
+        if (written < 0) {
+            if (errno == EINTR) continue;
+            return false;
         }
-        return true;
+        if (written == 0) return false;
+        offset += static_cast<size_t>(written);
     }
+    return true;
+}
 
-    /**
-     * @brief Copies data directly from one FD to another using a buffer.
-     */
-    bool copy_fd_contents(int srcFd, int dstFd, size_t totalBytes) {
-        static const size_t kChunkSize = 8192;
-        std::vector<char> buffer(kChunkSize);
-
-        size_t offset = 0;
-        while (offset < totalBytes) {
-            size_t toRead = std::min(kChunkSize, totalBytes - offset);
-            ssize_t readBytes = ::pread(srcFd, &buffer[0], toRead, static_cast<off_t>(offset));
-            
-            if (readBytes < 0) {
-                if (errno == EINTR) continue;
-                return false;
-            }
-            if (readBytes == 0) return false;
-
-            if (!write_all(dstFd, &buffer[0], static_cast<size_t>(readBytes))) {
-                return false;
-            }
-            offset += static_cast<size_t>(readBytes);
+/**
+ * @brief Copies data directly from one FD to another using a buffer.
+ */
+bool DataStore::copy_fd_contents(int srcFd, int dstFd, size_t totalBytes) {
+    static const size_t kChunkSize = 8192;
+    std::vector<char> buffer(kChunkSize);
+    size_t offset = 0;
+    while (offset < totalBytes) {
+        size_t toRead = std::min(kChunkSize, totalBytes - offset);
+        ssize_t readBytes = ::pread(srcFd, &buffer[0], toRead, static_cast<off_t>(offset));
+        
+        if (readBytes < 0) {
+            if (errno == EINTR) continue;
+            return false;
         }
-        return true;
+        if (readBytes == 0) return false;
+
+        if (!write_all(dstFd, &buffer[0], static_cast<size_t>(readBytes))) {
+            return false;
+        }
+        offset += static_cast<size_t>(readBytes);
     }
+    return true;
 }
 
 // Canonical Form
 
-DataStore::DataStore(): _mode(RAM), _bufferLimit(BufferLimit), _currentSize(0), _dataBuffer(), _fileFd(-1), _absolutePath()
+DataStore::DataStore(): _mode(RAM), _bufferLimit(BUFFERLIMIT), _currentSize(0), _dataBuffer(), _fileFd(-1), _absolutePath()
 {
 }
 
@@ -132,8 +129,12 @@ void DataStore::append(const char* data, size_t length) {
 			if(!_switchToFileMode()) {
                 throw std::runtime_error("DataStore: Buffer limit exceeded and failed to create temp file.");
             }
-            write_all(_fileFd, data, length);
-			_currentSize += length;
+            if (write_all(_fileFd, data, length)) {
+			    _currentSize += length;
+		    }
+            else {
+                throw std::runtime_error("DataStore: write faile");
+            }
 		}
         else {
             _dataBuffer.insert(_dataBuffer.end(), data, data + length);
@@ -144,6 +145,9 @@ void DataStore::append(const char* data, size_t length) {
 		if (write_all(_fileFd, data, length)) {
 			_currentSize += length;
 		}
+        else {
+            throw std::runtime_error("DataStore: write faile");
+        }
 	}
 
 }
@@ -226,5 +230,9 @@ bool DataStore::_switchToFileMode() {
  * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
      */
 std::string DataStore::_generateTempFileName() const {
-    return std::string(FILEPREFIX) + "XXXXXX"; 
+    static int file_conter = 0;
+    std::stringstream ss;
+    ss << file_conter;
+    file_conter++;
+    return std::string(FILEPREFIX) + ss.str(); 
 }
