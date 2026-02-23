@@ -133,7 +133,7 @@ void DataStore::append(const char* data, size_t length) {
 			    _currentSize += length;
 		    }
             else {
-                throw std::runtime_error("DataStore: write faile");
+                throw std::runtime_error(std::string("DataStore: write failed - ") + std::strerror(errno));
             }
 		}
         else {
@@ -228,7 +228,7 @@ bool DataStore::_switchToFileMode() {
 
 /**
  * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
-     */
+ */
 std::string DataStore::_generateTempFileName() const {
     static int file_conter = 0;
     std::stringstream ss;

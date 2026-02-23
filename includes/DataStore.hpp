@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <sstream>
 #include <algorithm>
+#include <cstring>
+#include <cerrno>
 
 #define FILEPREFIX "/tmp/lefthookroll_"
 #define BUFFERLIMIT 1024 * 1024
