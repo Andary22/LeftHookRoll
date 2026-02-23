@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #define FILEPREFIX "/tmp/lefthookroll_"
+#define BufferLimit 1024 * 1024
 
 /**
  * @enum BufferMode
