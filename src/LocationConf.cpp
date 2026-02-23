@@ -14,7 +14,7 @@ LocationConf::LocationConf(const LocationConf& other)
 {}
 
 LocationConf& LocationConf::operator=(const LocationConf& other)
-{
+{//
 	if (this != &other)
 	{
 		_path            = other._path;

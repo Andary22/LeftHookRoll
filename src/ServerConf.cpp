@@ -15,7 +15,7 @@ ServerConf::ServerConf(const ServerConf& other)
 {}
 
 ServerConf& ServerConf::operator=(const ServerConf& other)
-{
+{//
 	if (this != &other)
 	{
 		_serverName         = other._serverName;

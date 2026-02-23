@@ -19,7 +19,7 @@
 #include "ServerConf.hpp"
 
 class ConfigParser
-{
+{//
 public:
 
 	class ConfigException : public FatalException
