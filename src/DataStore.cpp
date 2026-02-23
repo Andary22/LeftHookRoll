@@ -8,47 +8,57 @@
 
 
 /**
- * @brief Ensures all data is written to the file descriptor.
+ * @brief Ensures all data is written to the file descriptor. Throws on any system error.
  */
-bool DataStore::write_all(int fd, const char* data, size_t length) {
+void DataStore::write_all(int fd, const char* data, size_t length) {
     size_t offset = 0;
     while (offset < length) {
         ssize_t written = ::write(fd, data + offset, length - offset);
         if (written < 0) {
             if (errno == EINTR) continue;
-            return false;
+            throw std::runtime_error(std::string("DataStore: write failed - ") + std::strerror(errno));
         }
-        if (written == 0) return false;
+        if (written == 0) {
+            throw std::runtime_error("DataStore: write failed - 0 bytes written (possible disk full)");
+        }
         offset += static_cast<size_t>(written);
     }
-    return true;
 }
 
 /**
- * @brief Copies data directly from one FD to another using a buffer.
+ * @brief Copies data directly from one FD to another using a buffer. Throws on error.
  */
-bool DataStore::copy_fd_contents(int srcFd, int dstFd, size_t totalBytes) {
+void DataStore::copy_fd_contents(const std::string& srcPath, int dstFd, size_t totalBytes) {
+    int srcFd = ::open(srcPath.c_str(), O_RDONLY);
+    if (srcFd < 0) {
+        throw std::runtime_error(std::string("DataStore: open failed during copy - ") + std::strerror(errno));
+    }
     static const size_t kChunkSize = 8192;
     std::vector<char> buffer(kChunkSize);
     size_t offset = 0;
-    while (offset < totalBytes) {
-        size_t toRead = std::min(kChunkSize, totalBytes - offset);
-        ssize_t readBytes = ::pread(srcFd, &buffer[0], toRead, static_cast<off_t>(offset));
-        
-        if (readBytes < 0) {
-            if (errno == EINTR) continue;
-            return false;
-        }
-        if (readBytes == 0) return false;
+    try {
+        while (offset < totalBytes) {
+            size_t toRead = std::min(kChunkSize, totalBytes - offset);
+            ssize_t readBytes = ::read(srcFd, &buffer[0], toRead);
+            
+            if (readBytes < 0) {
+                if (errno == EINTR) continue;
+                throw std::runtime_error(std::string("DataStore: read failed during copy - ") + std::strerror(errno));
+            }
+            if (readBytes == 0) {
+                throw std::runtime_error("DataStore: copy failed - unexpected EOF (source truncated)");
+            }
 
-        if (!write_all(dstFd, &buffer[0], static_cast<size_t>(readBytes))) {
-            return false;
+            write_all(dstFd, &buffer[0], static_cast<size_t>(readBytes));
+            offset += static_cast<size_t>(readBytes);
         }
-        offset += static_cast<size_t>(readBytes);
+    } catch (...) {
+        ::close(srcFd);
+        throw; // Re-throw the exception after cleaning up the FD
     }
-    return true;
+    
+    ::close(srcFd);
 }
-
 // Canonical Form
 
 DataStore::DataStore(): _mode(RAM), _bufferLimit(BUFFERLIMIT), _currentSize(0), _dataBuffer(), _fileFd(-1), _absolutePath()
@@ -66,13 +76,9 @@ DataStore::DataStore(const DataStore& other): _mode(RAM), _bufferLimit(other._bu
 		_mode = RAM;
 		_dataBuffer.clear();
 		_currentSize = other._currentSize;
-		if (!_switchToFileMode()) {
-            throw std::runtime_error("DataStore: Buffer limit exceeded and failed to create temp file.");
-        }
+		_switchToFileMode();
 		if (_currentSize > 0) {
-			if (!copy_fd_contents(other._fileFd, _fileFd, _currentSize)) {
-				clear();
-			}
+			copy_fd_contents(other._absolutePath, _fileFd, _currentSize);
 		}
 	}
 }
@@ -94,13 +100,9 @@ DataStore& DataStore::operator=(const DataStore& other) {
 		_mode = RAM;
 		_dataBuffer.clear();
 		_currentSize = other._currentSize;
-		if (!_switchToFileMode()) {
-            throw std::runtime_error("DataStore: Buffer limit exceeded and failed to create temp file.");
-        }
+		_switchToFileMode();
 		if (_currentSize > 0) {
-			if (!copy_fd_contents(other._fileFd, _fileFd, _currentSize)) {
-				clear();
-			}
+			copy_fd_contents(other._absolutePath, _fileFd, _currentSize);
 		}
 	}
 
@@ -126,15 +128,9 @@ void DataStore::append(const char* data, size_t length) {
 
 	if (_mode == RAM) {
 		if (_currentSize + length > _bufferLimit) {
-			if(!_switchToFileMode()) {
-                throw std::runtime_error("DataStore: Buffer limit exceeded and failed to create temp file.");
-            }
-            if (write_all(_fileFd, data, length)) {
-			    _currentSize += length;
-		    }
-            else {
-                throw std::runtime_error(std::string("DataStore: write failed - ") + std::strerror(errno));
-            }
+			_switchToFileMode();
+            write_all(_fileFd, data, length);
+			_currentSize += length;
 		}
         else {
             _dataBuffer.insert(_dataBuffer.end(), data, data + length);
@@ -142,12 +138,8 @@ void DataStore::append(const char* data, size_t length) {
         }
 	}
     else {
-		if (write_all(_fileFd, data, length)) {
-			_currentSize += length;
-		}
-        else {
-            throw std::runtime_error("DataStore: write faile");
-        }
+		write_all(_fileFd, data, length);
+		_currentSize += length;
 	}
 
 }
@@ -195,44 +187,41 @@ size_t DataStore::getSize() const {
  * @brief Handles the transition from RAM to a temporary file on disk.
  * Uses the immediate unlink() trick to ensure OS-level cleanup on crashes.
  */
-bool DataStore::_switchToFileMode() {
-	if (_mode == FILE_MODE) {
-		return true;
-	}
+void DataStore::_switchToFileMode() {
+    if (_mode == FILE_MODE) {
+        return ;
+    }
 
-	std::string templatePath = _generateTempFileName();
-	std::vector<char> pathBuffer(templatePath.begin(), templatePath.end());
-	pathBuffer.push_back('\0');
-
-	int fd = ::mkstemp(&pathBuffer[0]);
-	if (fd == -1) {
-		return false;
-	}
-
-	_absolutePath = &pathBuffer[0];
-	::unlink(_absolutePath.c_str());
-
-	if (!_dataBuffer.empty()) {
-		if (!write_all(fd, &_dataBuffer[0], _dataBuffer.size())) {
-			::close(fd);
-			_absolutePath.clear();
-			return false;
-		}
-		_dataBuffer.clear();
-	}
-
-	_fileFd = fd;
-	_mode = FILE_MODE;
-    return true;
+    static int file_counter = 0;
+    _generateTempFileName();
+    write_all(_fileFd, &_dataBuffer[0], _dataBuffer.size());
+    _dataBuffer.clear();
+    _mode = FILE_MODE;
 }
 
 /**
  * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
  */
-std::string DataStore::_generateTempFileName() const {
-    static int file_conter = 0;
-    std::stringstream ss;
-    ss << file_conter;
-    file_conter++;
-    return std::string(FILEPREFIX) + ss.str(); 
+void DataStore::_generateTempFileName() {
+    static int file_counter = 0;
+    int fd = -1;
+    std::string currentName;
+
+    while (fd == -1) {
+        std::stringstream ss;
+        ss << FILEPREFIX << file_counter++;
+        currentName = ss.str();
+        
+        fd = ::open(currentName.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
+        
+        if (fd == -1) {
+            if (errno == EEXIST) {
+                continue; // File exists, loop again and try the next number!
+            }
+            throw std::runtime_error(std::string("DataStore: open failed - ") + std::strerror(errno));
+        }
+    }
+    
+    _fileFd = fd;
+    _absolutePath = currentName;
 }

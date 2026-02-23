@@ -101,20 +101,20 @@ private:
      * @brief Handles the transition from RAM to a temporary file on disk.
      * Uses the immediate unlink() trick to ensure OS-level cleanup on crashes.
      */
-    bool _switchToFileMode();
+    void _switchToFileMode();
 
     /**
      * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
      */
-    std::string _generateTempFileName() const;
+    void _generateTempFileName();
 
     /**
      * @brief Ensures all data is written to the file descriptor.
      */
-    bool write_all(int fd, const char* data, size_t length);
+    void write_all(int fd, const char* data, size_t length);
 
     /**
      * @brief Copies data directly from one FD to another using a buffer.
      */
-    bool DataStore::copy_fd_contents(int srcFd, int dstFd, size_t totalBytes);
+    void copy_fd_contents(const std::string& srcPath, int dstFd, size_t totalBytes);
 };
