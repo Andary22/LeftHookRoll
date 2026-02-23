@@ -10,8 +10,17 @@
 #include <vector>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sstream>
+#include <algorithm>
+#include <cstring>
+#include <cerrno>
 
 #define FILEPREFIX "/tmp/lefthookroll_"
+#define BUFFERLIMIT 1024 * 1024
 
 /**
  * @enum BufferMode
@@ -27,7 +36,7 @@ public:
     // Canonical Form
     DataStore();
     DataStore(const DataStore& other);
-    DataStore& operator=(const DataStore& other);
+    DataStore& operator=(DataStore other);
     ~DataStore();
 
     //  Core Behavior
@@ -97,5 +106,15 @@ private:
     /**
      * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
      */
-    std::string _generateTempFileName() const;
+    void _generateTempFileName();
+
+    /**
+     * @brief Ensures all data is written to the file descriptor.
+     */
+    void write_all(int fd, const char* data, size_t length);
+
+    /**
+     * @brief Copies data directly from one FD to another using a buffer.
+     */
+    void copy_fd_contents(const std::string& srcPath, int dstFd, size_t totalBytes);
 };
