@@ -56,6 +56,8 @@ namespace {
     }
 }
 
+// Canonical Form
+
 DataStore::DataStore(): _mode(RAM), _bufferLimit(BufferLimit), _currentSize(0), _dataBuffer(), _fileFd(-1), _absolutePath()
 {
 }
@@ -116,6 +118,14 @@ DataStore::~DataStore() {
 	clear();
 }
 
+//  Core Behavior
+
+/**
+ * @brief Appends raw byte data to the store.
+ * Automatically transitions from RAM to FILE_MODE if _bufferLimit is exceeded.
+ * @param data Pointer to the buffer to append.
+ * @param length Number of bytes to append.
+ */
 void DataStore::append(const char* data, size_t length) {
 	if (data == NULL || length == 0) {
 		return;
@@ -123,7 +133,9 @@ void DataStore::append(const char* data, size_t length) {
 
 	if (_mode == RAM) {
 		if (_currentSize + length > _bufferLimit) {
-			_switchToFileMode();
+			if(!_switchToFileMode()) {
+                throw std::runtime_error("DataStore: Buffer limit exceeded and failed to create temp file.");
+            }
             write_all(_fileFd, data, length);
 			_currentSize += length;
 		}
@@ -139,10 +151,16 @@ void DataStore::append(const char* data, size_t length) {
 
 }
 
+/**
+ * @brief Convenience overload to append a std::string directly.
+ */
 void DataStore::append(const std::string& data) {
 	append(data.c_str(), data.size());
 }
 
+/**
+ * @brief Resets the store, clears the vector, and closes the temp file descriptor.
+ */
 void DataStore::clear() {
 	_dataBuffer.clear();
 	_currentSize = 0;
@@ -153,6 +171,8 @@ void DataStore::clear() {
 	}
 	_absolutePath.clear();
 }
+
+// Getters
 
 BufferMode DataStore::getMode() const {
 	return _mode;
@@ -170,9 +190,13 @@ size_t DataStore::getSize() const {
 	return _currentSize;
 }
 
+/**
+ * @brief Handles the transition from RAM to a temporary file on disk.
+ * Uses the immediate unlink() trick to ensure OS-level cleanup on crashes.
+ */
 bool DataStore::_switchToFileMode() {
 	if (_mode == FILE_MODE) {
-		return;
+		return true;
 	}
 
 	std::string templatePath = _generateTempFileName();
@@ -201,6 +225,9 @@ bool DataStore::_switchToFileMode() {
     return true;
 }
 
+/**
+ * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
+     */
 std::string DataStore::_generateTempFileName() const {
     static int file_cont = 0;
 
