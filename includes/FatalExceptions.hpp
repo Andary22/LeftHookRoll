@@ -5,7 +5,18 @@
 #pragma once
 
 #include <exception>
+#include <string>
 
 class FatalException : public std::exception
 {
+	public:
+		FatalException(const std::string& msg);
+		FatalException(const FatalException& other);
+		FatalException& operator=(const FatalException& other);
+		virtual ~FatalException() throw();
+
+		virtual const char* what() const throw();
+
+	private:
+		std::string _msg;
 };
