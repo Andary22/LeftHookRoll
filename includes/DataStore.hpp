@@ -93,7 +93,7 @@ private:
      * @brief Handles the transition from RAM to a temporary file on disk.
      * Uses the immediate unlink() trick to ensure OS-level cleanup on crashes.
      */
-    void _switchToFileMode();
+    bool _switchToFileMode();
 
     /**
      * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
