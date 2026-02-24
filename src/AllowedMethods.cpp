@@ -1,7 +1,5 @@
 #include "../includes/AllowedMethods.hpp"
 
-// --- Canonical Form ---
-
 AllowedMethods::AllowedMethods() : _bitmap(0) {}
 
 AllowedMethods::AllowedMethods(const AllowedMethods& other) : _bitmap(other._bitmap) {}
