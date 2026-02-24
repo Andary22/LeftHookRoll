@@ -1,4 +1,4 @@
-#include "AllowedMethods.hpp"
+#include "../includes/AllowedMethods.hpp"
 
 AllowedMethods::AllowedMethods() : _bitmap(0) {}
 

@@ -1,4 +1,4 @@
-#include "LocationConf.hpp"
+#include "../includes/LocationConf.hpp"
 
 LocationConf::LocationConf() : _autoIndex(false) {}
 
@@ -34,64 +34,64 @@ LocationConf::~LocationConf() {}
 
 const std::string& LocationConf::getPath() const
 {
-    return _path; 
+    return _path;
 }
-const std::string& LocationConf::getRoot() const          
+const std::string& LocationConf::getRoot() const
 {
-    return _root; 
+    return _root;
 }
-const AllowedMethods& LocationConf::getAllowedMethods() const 
-{ 
-    return _allowedMethods; 
+const AllowedMethods& LocationConf::getAllowedMethods() const
+{
+    return _allowedMethods;
 }
-const std::string& LocationConf::getReturnURL() const      
-{ 
-    return _returnURL; 
+const std::string& LocationConf::getReturnURL() const
+{
+    return _returnURL;
 }
-const std::string& LocationConf::getReturnCode() const     
-{ 
-    return _returnCode; 
+const std::string& LocationConf::getReturnCode() const
+{
+    return _returnCode;
 }
-bool               LocationConf::getAutoIndex() const      
-{ 
-    return _autoIndex; 
+bool               LocationConf::getAutoIndex() const
+{
+    return _autoIndex;
 }
-const std::string& LocationConf::getDefaultPage() const    
-{ 
-    return _defaultPage; 
+const std::string& LocationConf::getDefaultPage() const
+{
+    return _defaultPage;
 }
-const std::string& LocationConf::getStorageLocation() const 
-{ 
-    return _storageLocation; 
+const std::string& LocationConf::getStorageLocation() const
+{
+    return _storageLocation;
 }
 
-void LocationConf::setPath(const std::string& path)                      
-{ 
-    _path = path; 
+void LocationConf::setPath(const std::string& path)
+{
+    _path = path;
 }
-void LocationConf::setRoot(const std::string& root)                      
-{ 
-    _root = root; 
+void LocationConf::setRoot(const std::string& root)
+{
+    _root = root;
 }
-void LocationConf::setReturnURL(const std::string& url)                  
-{ 
-    _returnURL = url; 
+void LocationConf::setReturnURL(const std::string& url)
+{
+    _returnURL = url;
 }
-void LocationConf::setReturnCode(const std::string& code)                
-{ 
-    _returnCode = code; 
+void LocationConf::setReturnCode(const std::string& code)
+{
+    _returnCode = code;
 }
-void LocationConf::setAutoIndex(bool autoIndex)                          
-{ 
-    _autoIndex = autoIndex; 
+void LocationConf::setAutoIndex(bool autoIndex)
+{
+    _autoIndex = autoIndex;
 }
-void LocationConf::setDefaultPage(const std::string& defaultPage)        
-{ 
-    _defaultPage = defaultPage; 
+void LocationConf::setDefaultPage(const std::string& defaultPage)
+{
+    _defaultPage = defaultPage;
 }
 void LocationConf::setStorageLocation(const std::string& storageLocation)
-{ 
-    _storageLocation = storageLocation; 
+{
+    _storageLocation = storageLocation;
 }
 
 void LocationConf::addAllowedMethod(HTTPMethod method)

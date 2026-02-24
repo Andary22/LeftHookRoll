@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <arpa/inet.h>
-#include "ConfigParser.hpp"
+#include "../includes/ConfigParser.hpp"
 
 // ConfigException
 
@@ -37,7 +37,7 @@ std::vector<ServerConf> ConfigParser::parse()
 	ss << file.rdbuf();
 	if (file.bad())
 		throw ConfigException("read error on file: " + _filePath);
-	
+
     _tokenize(ss.str());
 
 	std::vector<ServerConf> servers;
@@ -67,7 +67,7 @@ void ConfigParser::_tokenize(const std::string& content)
 
 		if (std::isspace(c))
         {
-            i++; continue; 
+            i++; continue;
         }
 
 		if (c == '#')
@@ -135,7 +135,7 @@ ServerConf ConfigParser::_parseServerBlock()
 
 		if      (directive == "listen")
             _parseListen(conf);
-		else if (directive == "server_name")          
+		else if (directive == "server_name")
             _parseServerName(conf);
 		else if (directive == "client_max_body_size")
             _parseMaxBodySize(conf);
@@ -173,7 +173,7 @@ LocationConf ConfigParser::_parseLocationBlock(const std::string& path)
             _parseIndex(loc);
 		else if (directive == "upload_store")
             _parseUploadStore(loc);
-		else if (directive == "return")       
+		else if (directive == "return")
             _parseReturn(loc);
 		else
 			throw ConfigException("unknown location directive: '" + directive + "'");
