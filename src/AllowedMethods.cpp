@@ -5,13 +5,15 @@ AllowedMethods::AllowedMethods() : _bitmap(0) {}
 AllowedMethods::AllowedMethods(const AllowedMethods& other) : _bitmap(other._bitmap) {}
 
 AllowedMethods& AllowedMethods::operator=(const AllowedMethods& other)
-{//
+{
 	if (this != &other)
 		_bitmap = other._bitmap;
 	return *this;
 }
 
 AllowedMethods::~AllowedMethods() {}
+
+// --- Bitwise Operations ---
 
 void AllowedMethods::addMethod(HTTPMethod method)
 {
