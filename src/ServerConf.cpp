@@ -1,5 +1,5 @@
 #include <cstring>
-#include "ServerConf.hpp"
+#include "../includes/ServerConf.hpp"
 
 ServerConf::ServerConf() : _maxBodySize(0)
 {

@@ -2,10 +2,10 @@
 #include <cassert>
 #include <cstring>
 #include <arpa/inet.h>
-#include "AllowedMethods.hpp"
-#include "LocationConf.hpp"
-#include "ServerConf.hpp"
-#include "ConfigParser.hpp"
+#include "../includes/AllowedMethods.hpp"
+#include "../includes/LocationConf.hpp"
+#include "../includes/ServerConf.hpp"
+#include "../includes/ConfigParser.hpp"
 
 // ============================================================================
 // Minimal test harness
