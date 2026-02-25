@@ -41,3 +41,63 @@ Request& Request::operator=(const Request& other)
 
 Request::~Request() {}
 
+void Request::_parseRequestLine(const std::string& line)
+{
+	size_t firstSpace = line.find(' ');
+	if (firstSpace == std::string::npos)
+	{
+		_reqState = REQ_ERROR;
+		_statusCode = "400"; // Bad Request
+		return;
+	}
+	std::string methodStr = line.substr(0, firstSpace);
+	_methodName = AllowedMethods::stringToMethod(methodStr);
+	if (_methodName == UNKNOWN_METHOD)
+	{
+		_reqState = REQ_ERROR;
+		_statusCode = "501"; // Not Implemented
+		return;
+	}
+	size_t secondSpace = line.find(' ', firstSpace + 1);
+	if (secondSpace == std::string::npos)
+	{
+		// HTTP/0.9: "GET /path"
+		_URL = line.substr(firstSpace + 1);
+        if (_URL.empty() || _URL[0] != '/')
+        {
+            _reqState = REQ_ERROR;
+            _statusCode = "400"; // Bad Request
+            return;
+        }
+		_protocol = "HTTP/0.9";
+		_extractQueryFromURL();
+		_reqState = REQ_DONE;
+		return;
+	}
+	_URL = line.substr(firstSpace + 1, secondSpace - firstSpace - 1);
+	_protocol = line.substr(secondSpace + 1);
+	if (_protocol != "HTTP/1.0")
+	{
+		_reqState = REQ_ERROR;
+		_statusCode = "505"; // HTTP Version Not Supported
+		return;
+	}
+	if (_URL.empty() || _URL[0] != '/')
+	{
+		_reqState = REQ_ERROR;
+		_statusCode = "400"; // Bad Request
+		return;
+	}
+	_extractQueryFromURL();
+}
+
+void Request::_extractQueryFromURL()
+{
+	size_t queryPos = _URL.find('?');
+
+	if (queryPos != std::string::npos)
+	{
+		_query = _URL.substr(queryPos + 1);
+		_URL = _URL.substr(0, queryPos);
+	}
+}
