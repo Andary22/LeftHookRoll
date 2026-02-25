@@ -41,6 +41,29 @@ Request& Request::operator=(const Request& other)
 
 Request::~Request() {}
 
+// Getters
+
+HTTPMethod Request::getMethod() const {
+    return _methodName;
+}
+
+const std::string& Request::getURL() const {
+    return _URL;
+}
+
+const std::string& Request::getProtocol() const {
+    return _protocol;
+}
+
+const std::string& Request::getQuery() const {
+    return _query;
+}
+
+const std::map<std::string, std::string>& Request::getHeaders() const {
+    return _headers;
+}
+
+//  Core Parsing Behavior
 void Request::_parseRequestLine(const std::string& line)
 {
 	size_t firstSpace = line.find(' ');
