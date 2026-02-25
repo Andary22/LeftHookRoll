@@ -124,3 +124,108 @@ void Request::_extractQueryFromURL()
 		_URL = _URL.substr(0, queryPos);
 	}
 }
+
+size_t Request::parseHeaders(const std::string& rawBuffer)
+{
+	size_t headerEnd = rawBuffer.find("\r\n\r\n");
+	if (headerEnd == std::string::npos)
+		return 0;
+
+	std::string headerSection = rawBuffer.substr(0, headerEnd);
+	size_t lineStart = 0;
+	bool firstLine = true;
+
+	while (lineStart < headerSection.size())
+	{
+		size_t lineEnd = headerSection.find("\r\n", lineStart);
+		if (lineEnd == std::string::npos)
+			lineEnd = headerSection.size();
+
+		std::string line = headerSection.substr(lineStart, lineEnd - lineStart);
+		if (!line.empty())
+		{
+			if (firstLine)
+			{
+				_parseRequestLine(line);
+				firstLine = false;
+			}
+			else
+				_parseHeaderLine(line);
+		}
+		lineStart = lineEnd + 2;
+	}
+
+	// determine body transfer mode from the parsed headers
+	std::string transferEncoding = getHeader("Transfer-Encoding");
+	std::string contentLengthStr = getHeader("Content-Length");
+
+	std::string teLower = transferEncoding;
+    for (size_t i = 0; i < teLower.size(); ++i)
+        teLower[i] = std::tolower(static_cast<unsigned char>(teLower[i]));
+	if (teLower.find("chunked") != std::string::npos)
+	{
+		_contentLength = -1;
+		_reqState = REQ_CHUNKED;
+	}
+	else if (!contentLengthStr.empty())
+	{
+		char* endPtr = NULL;
+		long long cl = strtoll(contentLengthStr.c_str(), &endPtr, 10);
+		if (*endPtr != '\0' || cl < 0)
+		{
+			_reqState = REQ_ERROR;
+			_statusCode = "400";
+			return headerEnd + 4;
+		}
+		_contentLength = cl;
+		if (_maxBodySize > 0 && static_cast<size_t>(_contentLength) > _maxBodySize)
+		{
+			_reqState = REQ_ERROR;
+			_statusCode = "413";
+			return headerEnd + 4;
+		}
+		_reqState = (_contentLength == 0) ? REQ_DONE : REQ_BODY;
+	}
+	else
+	{
+		_contentLength = 0;
+		_reqState = REQ_DONE;
+	}
+
+	return headerEnd + 4;
+}
+
+std::string trim(const std::string& s) {
+    int start = 0;
+    int end = static_cast<int>(s.size()) - 1;
+    while (start <= end && std::isspace(static_cast<unsigned char>(s[start]))) {
+        ++start;
+    }
+    while (end >= start && std::isspace(static_cast<unsigned char>(s[end]))) {
+        --end;
+    }
+    if (start >= end) {
+        return "";
+    }
+    return s.substr(start, end - start + 1);
+}
+
+std::string Request::getHeader(const std::string& key) const
+{
+	if (_headers.count(key))
+        return _headers.find(key)->second;
+	return "";
+}
+
+void Request::_parseHeaderLine(const std::string& line)
+{
+	size_t colonPos = line.find(':');
+	if (colonPos == std::string::npos)
+		return;
+
+	std::string key = trim(line.substr(0, colonPos));
+	std::string value = trim(line.substr(colonPos + 1));
+
+	if (!key.empty())
+		_headers[key] = value;
+}
