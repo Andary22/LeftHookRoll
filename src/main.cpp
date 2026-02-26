@@ -33,7 +33,11 @@ int main(int argc, char** argv)
 	{
 		std::vector<ServerConf> parsedConfs;
 		if (argc == 1)
-			parsedConfs.push_back(ServerConf());
+		{
+			ServerConf defaultConf;
+			defaultConf.setDefaults();
+			parsedConfs.push_back(defaultConf);
+		}
 		else
 		{
 			ConfigParser parser(argv[1]);

@@ -1,23 +1,12 @@
-#include <cstring>
-#include <iostream>
-#include "../includes/ServerConf.hpp"
-#include <arpa/inet.h>
 
-ServerConf::ServerConf()
-	:	_serverName("LeftHookRoll"),
-		_interfacePortPair(),
-		_maxBodySize(1024*1024),
-		_locations(),
-		_errorPages()
+#include "../includes/ServerConf.hpp"
+
+
+ServerConf::ServerConf() : _maxBodySize(0)
 {
-	memset(&_interfacePortPair, 0, sizeof(_interfacePortPair));
-	_interfacePortPair.sin_family = AF_INET;
-	_interfacePortPair.sin_addr.s_addr = INADDR_ANY;
-	_interfacePortPair.sin_port = htons(8080);
-	std::cout << "Default " << _serverName << "Listening on "
-			  << inet_ntoa(_interfacePortPair.sin_addr) << ":"
-			  << ntohs(_interfacePortPair.sin_port) << std::endl;
+	std::memset(&_interfacePortPair, 0, sizeof(_interfacePortPair));
 }
+
 
 ServerConf::ServerConf(const ServerConf& other)
 	: _serverName(other._serverName),
