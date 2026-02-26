@@ -11,7 +11,9 @@
 #include <map>
 #include <netinet/in.h>
 #include "LocationConf.hpp"
-
+#include <cstring>
+#include <iostream>
+#include <arpa/inet.h>
 class ServerConf
 {
 	public:
@@ -52,7 +54,21 @@ class ServerConf
 		 * @return The path to the custom error page, or an empty string if none is defined.
 		 */
 		std::string getErrorPagePath(const std::string& errorCode) const;
-
+		/**
+		 * @brief Set the Defaults config directives.
+		 *
+		 */
+		void setDefaults()
+		{
+			_serverName = "LeftHookRoll";
+			_maxBodySize = 1024 * 1024;
+			_interfacePortPair.sin_family = AF_INET;
+			_interfacePortPair.sin_addr.s_addr = INADDR_ANY;
+			_interfacePortPair.sin_port = htons(8080);
+			std::cout << "Default " << _serverName << " Listening on "
+					  << inet_ntoa(_interfacePortPair.sin_addr) << ":"
+					  << ntohs(_interfacePortPair.sin_port) << std::endl;
+			}
 	private:
 		//  Identity
 		std::string			_serverName;

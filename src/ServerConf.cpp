@@ -1,10 +1,12 @@
-#include <cstring>
-#include "ServerConf.hpp"
+
+#include "../includes/ServerConf.hpp"
+
 
 ServerConf::ServerConf() : _maxBodySize(0)
 {
 	std::memset(&_interfacePortPair, 0, sizeof(_interfacePortPair));
 }
+
 
 ServerConf::ServerConf(const ServerConf& other)
 	: _serverName(other._serverName),
@@ -15,7 +17,7 @@ ServerConf::ServerConf(const ServerConf& other)
 {}
 
 ServerConf& ServerConf::operator=(const ServerConf& other)
-{//
+{
 	if (this != &other)
 	{
 		_serverName         = other._serverName;

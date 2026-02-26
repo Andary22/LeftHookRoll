@@ -15,14 +15,13 @@
 
 #include <string>
 #include <vector>
-#include "FatalExceptions.hpp"
 #include "ServerConf.hpp"
 
 class ConfigParser
-{//
+{
 public:
 
-	class ConfigException : public FatalException
+	class ConfigException : public std::exception
 	{
 	public:
 		explicit ConfigException(const std::string& msg);
@@ -37,7 +36,7 @@ public:
 	explicit ConfigParser(const std::string& filePath);
 	~ConfigParser();
 
-	// Public API 
+	// Public API
 
 	/**
 	 * @brief Parses the config file and returns one ServerConf per server block.
@@ -82,7 +81,7 @@ private:
 	void _parseUploadStore(LocationConf& loc);
 	void _parseReturn(LocationConf& loc);
 
-	// Validators / converters 
+	// Validators / converters
 
 	struct sockaddr_in _parseSockAddr(const std::string& listenValue);
 	size_t             _parseBodySize(const std::string& value);
