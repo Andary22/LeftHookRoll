@@ -9,8 +9,7 @@
 
 #include "../includes/ServerManager.hpp"
 #include "../includes/FatalExceptions.hpp"
-
-#define DEFAULT_PORT 8080
+#include "../includes/ConfigParser.hpp"
 
 /*TEMP IMPLEMENTATION SO WE CAN CTRLC*/
 volatile sig_atomic_t g_running = 1;
@@ -38,13 +37,9 @@ int main(int argc, char** argv)
 
 	try
 	{
-		ServerManager manager;
-
-		// Temporary: listen on a hardcoded port until config parsing is implemented.
-		(void)argv;
-		int port = DEFAULT_PORT;
-		manager.addListenPort(port);// replace this with the vector of serverconfs later.
-
+		ConfigParser parser(argv[1]);
+		std::vector<ServerConf> parsedConfs = parser.parse();
+		ServerManager manager(parsedConfs);
 		manager.run();
 	}
 	catch (const FatalException& e)
