@@ -154,8 +154,12 @@ size_t Request::parseHeaders(const std::string& rawBuffer)
 		}
 		lineStart = lineEnd + 2;
 	}
+	return headerEnd + 4;
+}
 
-	// determine body transfer mode from the parsed headers
+void Request::_typeOfReq(const std::string& line)
+{
+    // determine body transfer mode from the parsed headers
 	std::string transferEncoding = getHeader("Transfer-Encoding");
 	std::string contentLengthStr = getHeader("Content-Length");
 
@@ -175,14 +179,14 @@ size_t Request::parseHeaders(const std::string& rawBuffer)
 		{
 			_reqState = REQ_ERROR;
 			_statusCode = "400";
-			return headerEnd + 4;
+			return ;
 		}
 		_contentLength = cl;
 		if (_maxBodySize > 0 && static_cast<size_t>(_contentLength) > _maxBodySize)
 		{
 			_reqState = REQ_ERROR;
 			_statusCode = "413";
-			return headerEnd + 4;
+			return ;
 		}
 		_reqState = (_contentLength == 0) ? REQ_DONE : REQ_BODY;
 	}
@@ -191,8 +195,6 @@ size_t Request::parseHeaders(const std::string& rawBuffer)
 		_contentLength = 0;
 		_reqState = REQ_DONE;
 	}
-
-	return headerEnd + 4;
 }
 
 std::string trim(const std::string& s) {
