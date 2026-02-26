@@ -39,14 +39,6 @@ public:
 	//  Core Parsing Behavior
 
 	/**
-	 * @brief Main entry point to parse the raw buffer from the Connection.
-	 * Handles the entire state machine for parsing headers and body.
-	 * @param rawBuffer The string buffer accumulated by the Connection.
-	 * @return void. Updates internal state and data members accordingly.
-	 */
-	void parse(const std::string& rawBuffer);
-
-	/**
 	 * @brief Parses the raw buffer containing the HTTP Request-Line and Headers.
 	 * Transitions state to REQ_BODY, REQ_CHUNKED, or REQ_DONE upon finding \r\n\r\n.
 	 * @param rawBuffer The string buffer accumulated by the Connection.
