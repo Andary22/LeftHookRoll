@@ -231,3 +231,23 @@ void Request::_parseHeaderLine(const std::string& line)
 	if (!key.empty())
 		_headers[key] = value;
 }
+
+void Request::parse(const std::string& rawBuffer)
+{
+    if (_reqState == REQ_HEADERS)
+    {
+        size_t headerEndIndex = parseHeaders(rawBuffer);
+        if (headerEndIndex == 0)
+            return;
+
+        _typeOfReq(rawBuffer.substr(0, headerEndIndex));
+    }
+    else if (_reqState == REQ_CHUNKED)
+    {
+        // to do
+    }
+    else if (_reqState == REQ_BODY)
+    {
+        // to do
+    }
+}
