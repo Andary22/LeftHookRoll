@@ -9,8 +9,7 @@
 
 #include "../includes/ServerManager.hpp"
 #include "../includes/FatalExceptions.hpp"
-
-#define DEFAULT_PORT 8080
+#include "../includes/ConfigParser.hpp"
 
 /*TEMP IMPLEMENTATION SO WE CAN CTRLC*/
 volatile sig_atomic_t g_running = 1;
@@ -24,27 +23,27 @@ static void signalHandler(int sig)
 
 int main(int argc, char** argv)
 {
+	signal(SIGINT, signalHandler);
 	if (argc > 2)
 	{
 		std::cerr << "Usage: " << argv[0] << " [configuration file]" << std::endl;
-		return EXIT_FAILURE;
+		return 1;
 	}
-
-	signal(SIGINT, signalHandler);
-	signal(SIGPIPE, SIG_IGN);
-
-	// std::string configPath = (argc == 2) ? argv[1] : "default.conf";
-	// TODO: parse config file into std::vector<ServerConf>
-
 	try
 	{
-		ServerManager manager;
-
-		// Temporary: listen on a hardcoded port until config parsing is implemented.
-		(void)argv;
-		int port = DEFAULT_PORT;
-		manager.addListenPort(port);// replace this with the vector of serverconfs later.
-
+		std::vector<ServerConf> parsedConfs;
+		if (argc == 1)
+		{
+			ServerConf defaultConf;
+			defaultConf.setDefaults();
+			parsedConfs.push_back(defaultConf);
+		}
+		else
+		{
+			ConfigParser parser(argv[1]);
+			parsedConfs = parser.parse();
+		}
+		ServerManager manager(parsedConfs);
 		manager.run();
 	}
 	catch (const FatalException& e)
