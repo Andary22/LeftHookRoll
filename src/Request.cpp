@@ -5,6 +5,23 @@
 
 #include "../includes/Request.hpp"
 
+namespace RequestUtils
+{
+    std::string trim(const std::string& s) {
+        int start = 0;
+        int end = static_cast<int>(s.size()) - 1;
+        while (start <= end && std::isspace(static_cast<unsigned char>(s[start]))) {
+            ++start;
+        }
+        while (end >= start && std::isspace(static_cast<unsigned char>(s[end]))) {
+            --end;
+        }
+        if (start > end) {
+            return "";
+        }
+        return s.substr(start, end - start + 1);
+    }
+}
 // Canonical Form
 
 Request::Request(): _methodName(UNKNOWN_METHOD), _contentLength(-1), _reqState(REQ_HEADERS), _statusCode("200"), _maxBodySize(0), _totalBytesRead(0), _chunkSize(0), _chunkDecodeOffset(0), _isBodyProcessed(false)
@@ -165,10 +182,10 @@ void Request::_typeOfReq()
 	std::string transferEncoding = getHeader("Transfer-Encoding");
 	std::string contentLengthStr = getHeader("Content-Length");
 
-	std::string teLower = transferEncoding;
-    for (size_t i = 0; i < teLower.size(); ++i)
-        teLower[i] = std::tolower(static_cast<unsigned char>(teLower[i]));
-	if (teLower.find("chunked") != std::string::npos)
+	std::string toLower = transferEncoding;
+    for (size_t i = 0; i < toLower.size(); ++i)
+        toLower[i] = std::tolower(static_cast<unsigned char>(toLower[i]));
+	if (toLower.find("chunked") != std::string::npos)
 	{
 		_contentLength = -1;
 		_reqState = REQ_CHUNKED;
@@ -199,21 +216,6 @@ void Request::_typeOfReq()
 	}
 }
 
-std::string trim(const std::string& s) {
-    int start = 0;
-    int end = static_cast<int>(s.size()) - 1;
-    while (start <= end && std::isspace(static_cast<unsigned char>(s[start]))) {
-        ++start;
-    }
-    while (end >= start && std::isspace(static_cast<unsigned char>(s[end]))) {
-        --end;
-    }
-    if (start > end) {
-        return "";
-    }
-    return s.substr(start, end - start + 1);
-}
-
 std::string Request::getHeader(const std::string& key) const
 {
 	if (_headers.count(key))
@@ -227,8 +229,8 @@ void Request::_parseHeaderLine(const std::string& line)
 	if (colonPos == std::string::npos)
 		return;
 
-	std::string key = trim(line.substr(0, colonPos));
-	std::string value = trim(line.substr(colonPos + 1));
+	std::string key = RequestUtils::trim(line.substr(0, colonPos));
+	std::string value = RequestUtils::trim(line.substr(colonPos + 1));
 
 	if (!key.empty())
 		_headers[key] = value;
