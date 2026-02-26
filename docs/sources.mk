@@ -3,4 +3,6 @@ SRCS= main.cpp \
 	AllowedMethods.cpp \
 	LocationConf.cpp \
 	ServerConf.cpp \
-	ServerManager.cpp
+	ServerManager.cpp \
+	Request.cpp \
+	DataStore.cpp \
