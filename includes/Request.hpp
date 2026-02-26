@@ -113,6 +113,6 @@ private:
 	//  Private Parsing Helpers
 	void _parseRequestLine(const std::string& line);// parses the  METHOD  URI PROTOCOL line.
 	void _parseHeaderLine(const std::string& line);// parses the key value
-	void _typeOfReq(const std::string& line);// know what type of request is it, chenked or content length
+	void _typeOfReq();// know what type of request is it, chenked or content length
 	void _extractQueryFromURL();
 };

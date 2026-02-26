@@ -154,10 +154,12 @@ size_t Request::parseHeaders(const std::string& rawBuffer)
 		}
 		lineStart = lineEnd + 2;
 	}
+    if (_reqState != REQ_ERROR)
+        _typeOfReq();
 	return headerEnd + 4;
 }
 
-void Request::_typeOfReq(const std::string& line)
+void Request::_typeOfReq()
 {
     // determine body transfer mode from the parsed headers
 	std::string transferEncoding = getHeader("Transfer-Encoding");
@@ -206,7 +208,7 @@ std::string trim(const std::string& s) {
     while (end >= start && std::isspace(static_cast<unsigned char>(s[end]))) {
         --end;
     }
-    if (start >= end) {
+    if (start > end) {
         return "";
     }
     return s.substr(start, end - start + 1);
