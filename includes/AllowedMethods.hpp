@@ -9,7 +9,7 @@
  *
  */
 #pragma once
-
+#include <string>
 /**
  * @enum HTTPMethod
  * @brief Represents the HTTP methods supported by the server as a bitmask.
@@ -62,6 +62,10 @@ class AllowedMethods
 		 */
 		short getBitmap() const;
 
+		/**
+		 * @brief Converts a string representation of an HTTP method to its enum value.
+		 */
+		static HTTPMethod stringToMethod(const std::string& methodStr);
 	private:
 		short _bitmap;
 };
