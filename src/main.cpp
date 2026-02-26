@@ -23,22 +23,25 @@ static void signalHandler(int sig)
 
 int main(int argc, char** argv)
 {
+	signal(SIGINT, signalHandler);
 	if (argc > 2)
 	{
 		std::cerr << "Usage: " << argv[0] << " [configuration file]" << std::endl;
 		return EXIT_FAILURE;
 	}
-
-	signal(SIGINT, signalHandler);
-	signal(SIGPIPE, SIG_IGN);
-
-	// std::string configPath = (argc == 2) ? argv[1] : "default.conf";
-	// TODO: parse config file into std::vector<ServerConf>
-
 	try
 	{
-		ConfigParser parser(argv[1]);
-		std::vector<ServerConf> parsedConfs = parser.parse();
+		std::vector<ServerConf> parsedConfs;
+		if (argc == 1)
+		{
+			ConfigParser parser;
+			parsedConfs = parser.parse();
+		}
+		else
+		{
+			ConfigParser parser(argv[1]);
+			parsedConfs = parser.parse();
+		}
 		ServerManager manager(parsedConfs);
 		manager.run();
 	}

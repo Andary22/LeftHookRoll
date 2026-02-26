@@ -23,14 +23,18 @@ ServerManager::ServerManager() : _epollFd(-1)
 	_eventBuffer.resize(64);
 }
 
-ServerManager::ServerManager(std::vector<ServerConf*> confs) : _epollFd(-1)
+ServerManager::ServerManager(std::vector<ServerConf> confsCopy) : _epollFd(-1)
 {
 	_epollFd = epoll_create(1);
 	if (_epollFd < 0)
 		throw FatalException(std::string("epoll_create(): ") + strerror(errno));
 	_eventBuffer.resize(64);
-	for (size_t i = 0; i < confs.size(); ++i)
-		addServer(confs[i]);
+
+	for (size_t i = 0; i < confsCopy.size(); ++i)
+	{
+		_serverConfs.push_back(new ServerConf(confsCopy[i]));
+		addServer(_serverConfs.back());
+	}
 }
 
 ServerManager::ServerManager(const ServerManager& other)
@@ -72,6 +76,8 @@ ServerManager& ServerManager::operator=(const ServerManager& other)
 
 ServerManager::~ServerManager()
 {
+	for(size_t i = 0; i < _serverConfs.size(); i++)
+		delete _serverConfs[i];
 	_closeAllFds();
 }
 
@@ -93,6 +99,10 @@ void ServerManager::addServer(const ServerConf* conf)
 
 void ServerManager::addListenPort(int port)
 {
+	/**
+	 * @brief debuggign function to listen without needing a conf file.
+	 *
+	 */
 	struct sockaddr_in addr;
 	std::memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
@@ -136,7 +146,7 @@ void ServerManager::run()
 
 			if (_listenFds.count(fd))
 				_acceptNewConnections(fd);
-			else if ((events & EPOLLIN) && !_readAndPrint(fd))
+			else if ((events & EPOLLIN) && !_readAndPrint(fd))//TODO: replace with actual request handling
 				_dropConnection(fd);
 		}
 	}

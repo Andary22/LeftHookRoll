@@ -37,7 +37,7 @@ class ServerManager {
 public:
 	// Canonical Form
 	ServerManager();
-	ServerManager(std::vector<ServerConf*> confs);// this will be the main constructer to use once we have parsing up and ready!
+	ServerManager(std::vector<ServerConf> confs);// this will be the main constructer to use once we have parsing up and ready!
 	ServerManager(const ServerManager& other);
 	ServerManager& operator=(const ServerManager& other);
 	~ServerManager();
@@ -79,7 +79,7 @@ public:
 private:
 	// Config mapping
 	std::map<struct sockaddr_in, const ServerConf*, SockAddrCompare> _interfacePortPairs;
-
+	std::vector<ServerConf*> _serverConfs;
 	// Event loop state
 	int								_epollFd;
 	std::vector<struct epoll_event>	_eventBuffer;
