@@ -27,16 +27,13 @@ int main(int argc, char** argv)
 	if (argc > 2)
 	{
 		std::cerr << "Usage: " << argv[0] << " [configuration file]" << std::endl;
-		return EXIT_FAILURE;
+		return 1;
 	}
 	try
 	{
 		std::vector<ServerConf> parsedConfs;
 		if (argc == 1)
-		{
-			ConfigParser parser;
-			parsedConfs = parser.parse();
-		}
+			parsedConfs.push_back(ServerConf());
 		else
 		{
 			ConfigParser parser(argv[1]);
