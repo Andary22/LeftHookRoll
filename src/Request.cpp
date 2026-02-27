@@ -236,3 +236,31 @@ void Request::_parseHeaderLine(const std::string& line)
 		_headers[key] = value;
 }
 
+
+
+bool Request::isChunkedDone(const std::string& newData) const
+{
+    return newData.find("0\r\n\r\n") != std::string::npos;
+}
+
+
+//  State Management Getters
+
+ReqState	Request::getReqState() const{
+    return _reqState;
+}
+std::string	Request::getStatusCode() const{
+    return _statusCode;
+}
+
+// I don't know what to return here
+size_t		Request::getMaxBytesToRead() const{
+    return _maxBodySize;
+}
+
+size_t		Request::getTotalBytesRead() const{
+    return _totalBytesRead;
+}
+bool		Request::isComplete() const{
+    return _reqState == REQ_DONE;
+}
