@@ -236,7 +236,82 @@ void Request::_parseHeaderLine(const std::string& line)
 		_headers[key] = value;
 }
 
+bool Request::processBodySlice()
+{
+    if (_contentLength >= 0 || _isBodyProcessed || _reqState == REQ_ERROR)
+        return true;
 
+    if (_body.getMode() == RAM)
+    {
+        const std::vector<char>& vec = _body.getVector();
+        
+        if (_ramParsePos < vec.size()) {
+            size_t bytesAvailable = vec.size() - _ramParsePos;            
+            size_t bytesToCopy = (bytesAvailable > PARSE_BYTE_SLICE) ? PARSE_BYTE_SLICE : bytesAvailable;            
+            _chunkBuffer.append(vec.begin() + _ramParsePos, vec.begin() + _ramParsePos + bytesToCopy);            
+            _ramParsePos += bytesToCopy; 
+        }
+    }
+    else
+    {
+        char buffer[PARSE_BYTE_SLICE];
+        ssize_t bytesRead = ::read(getBodyStore().getFd(), buffer, sizeof(buffer));        
+        if (bytesRead < 0) {
+            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) 
+                return false;
+            _reqState = REQ_ERROR;
+            _statusCode = "500";
+            return true;
+        }
+        if (bytesRead == 0 && _chunkBuffer.empty()) {
+            _reqState = REQ_ERROR;
+            _statusCode = "400";
+            return true;
+        }
+        _chunkBuffer.append(buffer, static_cast<size_t>(bytesRead));
+    }
+    while (true)
+    {
+        size_t crlfPos = _chunkBuffer.find("\r\n");
+        if (crlfPos == std::string::npos) 
+            break;
+        std::string hexStr = _chunkBuffer.substr(0, crlfPos);
+        size_t semi = hexStr.find(';');
+        if (semi != std::string::npos) 
+            hexStr = hexStr.substr(0, semi);
+
+        unsigned long chunkSize = strtoul(hexStr.c_str(), NULL, 16);
+        size_t totalBytesNeeded = crlfPos + 2 + chunkSize + 2;
+
+        if (_chunkBuffer.size() < totalBytesNeeded) 
+            break;
+        if (_chunkBuffer.substr(crlfPos + 2 + chunkSize, 2) != "\r\n") {
+            _reqState = REQ_ERROR;
+            _statusCode = "400"; // Malformed chunk formatting
+            return true;
+        }
+        if (chunkSize == 0) {
+            _chunkBuffer.erase(0, totalBytesNeeded);
+            _isBodyProcessed = true;
+            break; 
+        }
+
+        _decodedBody.append(_chunkBuffer.substr(crlfPos + 2, chunkSize));
+        if (_maxBodySize > 0 && _decodedBody.getSize() > _maxBodySize) {
+            _reqState = REQ_ERROR;
+            _statusCode = "413"; // Payload Too Large
+            return true;
+        }
+        _chunkBuffer.erase(0, totalBytesNeeded);
+    }
+
+    if (_isBodyProcessed) {
+        _body = _decodedBody;
+        _chunkBuffer.clear();
+        return true;
+    }
+    return false; 
+}
 
 bool Request::isChunkedDone(const std::string& newData) const
 {
@@ -263,4 +338,8 @@ size_t		Request::getTotalBytesRead() const{
 }
 bool		Request::isComplete() const{
     return _reqState == REQ_DONE;
+}
+
+DataStore&	Request::getBodyStore(){
+    return _body;
 }

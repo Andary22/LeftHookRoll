@@ -83,6 +83,12 @@ public:
      */
     size_t getSize() const;
 
+    /**
+     * @brief Gets the absolute path of the temporary file.
+     * @warning Only valid if mode is FILE_MODE. should never use in normal operation, only for testing/debugging purposes.
+     */
+    std::string getFilePath() const;
+
 private:
     //  Identity & State
     BufferMode          _mode;
