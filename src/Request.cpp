@@ -7,20 +7,20 @@
 
 namespace RequestUtils
 {
-    std::string trim(const std::string& s) {
-        int start = 0;
-        int end = static_cast<int>(s.size()) - 1;
-        while (start <= end && std::isspace(static_cast<unsigned char>(s[start]))) {
-            ++start;
-        }
-        while (end >= start && std::isspace(static_cast<unsigned char>(s[end]))) {
-            --end;
-        }
-        if (start > end) {
-            return "";
-        }
-        return s.substr(start, end - start + 1);
-    }
+	std::string trim(const std::string& s) {
+		int start = 0;
+		int end = static_cast<int>(s.size()) - 1;
+		while (start <= end && std::isspace(static_cast<unsigned char>(s[start]))) {
+			++start;
+		}
+		while (end >= start && std::isspace(static_cast<unsigned char>(s[end]))) {
+			--end;
+		}
+		if (start > end) {
+			return "";
+		}
+		return s.substr(start, end - start + 1);
+	}
 }
 // Canonical Form
 
@@ -64,23 +64,23 @@ Request::~Request() {}
 // Getters
 
 HTTPMethod Request::getMethod() const {
-    return _methodName;
+	return _methodName;
 }
 
 const std::string& Request::getURL() const {
-    return _URL;
+	return _URL;
 }
 
 const std::string& Request::getProtocol() const {
-    return _protocol;
+	return _protocol;
 }
 
 const std::string& Request::getQuery() const {
-    return _query;
+	return _query;
 }
 
 const std::map<std::string, std::string>& Request::getHeaders() const {
-    return _headers;
+	return _headers;
 }
 
 //  Core Parsing Behavior
@@ -106,12 +106,12 @@ void Request::_parseRequestLine(const std::string& line)
 	{
 		// HTTP/0.9: "GET /path"
 		_URL = line.substr(firstSpace + 1);
-        if (_URL.empty() || _URL[0] != '/')
-        {
-            _reqState = REQ_ERROR;
-            _statusCode = "400"; // Bad Request
-            return;
-        }
+		if (_URL.empty() || _URL[0] != '/')
+		{
+			_reqState = REQ_ERROR;
+			_statusCode = "400"; // Bad Request
+			return;
+		}
 		_protocol = "HTTP/0.9";
 		_extractQueryFromURL();
 		_reqState = REQ_DONE;
@@ -174,20 +174,20 @@ size_t Request::parseHeaders(const std::string& rawBuffer)
 		}
 		lineStart = lineEnd + 2;
 	}
-    if (_reqState != REQ_ERROR)
-        _typeOfReq();
+	if (_reqState != REQ_ERROR)
+		_typeOfReq();
 	return headerEnd + 4;
 }
 
 void Request::_typeOfReq()
 {
-    // determine body transfer mode from the parsed headers
+	// determine body transfer mode from the parsed headers
 	std::string transferEncoding = getHeader("Transfer-Encoding");
 	std::string contentLengthStr = getHeader("Content-Length");
 
 	std::string toLower = transferEncoding;
-    for (size_t i = 0; i < toLower.size(); ++i)
-        toLower[i] = std::tolower(static_cast<unsigned char>(toLower[i]));
+	for (size_t i = 0; i < toLower.size(); ++i)
+		toLower[i] = std::tolower(static_cast<unsigned char>(toLower[i]));
 	if (toLower.find("chunked") != std::string::npos)
 	{
 		_contentLength = -1;
@@ -222,7 +222,7 @@ void Request::_typeOfReq()
 std::string Request::getHeader(const std::string& key) const
 {
 	if (_headers.count(key))
-        return _headers.find(key)->second;
+		return _headers.find(key)->second;
 	return "";
 }
 
@@ -241,108 +241,108 @@ void Request::_parseHeaderLine(const std::string& line)
 
 bool Request::processBodySlice()
 {
-    if (_contentLength >= 0 || _isBodyProcessed || _reqState == REQ_ERROR)
-        return true;
+	if (_contentLength >= 0 || _isBodyProcessed || _reqState == REQ_ERROR)
+		return true;
 
-    if (_body.getMode() == RAM)
-    {
-        const std::vector<char>& vec = _body.getVector();
-        
-        if (_ramParsePos < vec.size()) {
-            size_t bytesAvailable = vec.size() - _ramParsePos;            
-            size_t bytesToCopy = (bytesAvailable > PARSE_BYTE_SLICE) ? PARSE_BYTE_SLICE : bytesAvailable;            
-            _chunkBuffer.append(vec.begin() + _ramParsePos, vec.begin() + _ramParsePos + bytesToCopy);            
-            _ramParsePos += bytesToCopy; 
-        }
-    }
-    else
-    {
-        char buffer[PARSE_BYTE_SLICE];
-        ssize_t bytesRead = ::read(getBodyStore().getFd(), buffer, sizeof(buffer));        
-        if (bytesRead < 0) {
-            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) 
-                return false;
-            _reqState = REQ_ERROR;
-            _statusCode = "500";
-            return true;
-        }
-        if (bytesRead == 0 && _chunkBuffer.empty()) {
-            _reqState = REQ_ERROR;
-            _statusCode = "400";
-            return true;
-        }
-        _chunkBuffer.append(buffer, static_cast<size_t>(bytesRead));
-    }
-    while (true)
-    {
-        size_t crlfPos = _chunkBuffer.find("\r\n");
-        if (crlfPos == std::string::npos) 
-            break;
-        std::string hexStr = _chunkBuffer.substr(0, crlfPos);
-        size_t semi = hexStr.find(';');
-        if (semi != std::string::npos) 
-            hexStr = hexStr.substr(0, semi);
+	if (_body.getMode() == RAM)
+	{
+		const std::vector<char>& vec = _body.getVector();
 
-        unsigned long chunkSize = strtoul(hexStr.c_str(), NULL, 16);
-        size_t totalBytesNeeded = crlfPos + 2 + chunkSize + 2;
+		if (_ramParsePos < vec.size()) {
+			size_t bytesAvailable = vec.size() - _ramParsePos;
+			size_t bytesToCopy = (bytesAvailable > PARSE_BYTE_SLICE) ? PARSE_BYTE_SLICE : bytesAvailable;
+			_chunkBuffer.append(vec.begin() + _ramParsePos, vec.begin() + _ramParsePos + bytesToCopy);
+			_ramParsePos += bytesToCopy;
+		}
+	}
+	else
+	{
+		char buffer[PARSE_BYTE_SLICE];
+		ssize_t bytesRead = ::read(getBodyStore().getFd(), buffer, sizeof(buffer));
+		if (bytesRead < 0) {
+			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+				return false;
+			_reqState = REQ_ERROR;
+			_statusCode = "500";
+			return true;
+		}
+		if (bytesRead == 0 && _chunkBuffer.empty()) {
+			_reqState = REQ_ERROR;
+			_statusCode = "400";
+			return true;
+		}
+		_chunkBuffer.append(buffer, static_cast<size_t>(bytesRead));
+	}
+	while (true)
+	{
+		size_t crlfPos = _chunkBuffer.find("\r\n");
+		if (crlfPos == std::string::npos)
+			break;
+		std::string hexStr = _chunkBuffer.substr(0, crlfPos);
+		size_t semi = hexStr.find(';');
+		if (semi != std::string::npos)
+			hexStr = hexStr.substr(0, semi);
 
-        if (_chunkBuffer.size() < totalBytesNeeded) 
-            break;
-        if (_chunkBuffer.substr(crlfPos + 2 + chunkSize, 2) != "\r\n") {
-            _reqState = REQ_ERROR;
-            _statusCode = "400"; // Malformed chunk formatting
-            return true;
-        }
-        if (chunkSize == 0) {
-            _chunkBuffer.erase(0, totalBytesNeeded);
-            _isBodyProcessed = true;
-            break; 
-        }
+		unsigned long chunkSize = strtoul(hexStr.c_str(), NULL, 16);
+		size_t totalBytesNeeded = crlfPos + 2 + chunkSize + 2;
 
-        _decodedBody.append(_chunkBuffer.substr(crlfPos + 2, chunkSize));
-        if (_maxBodySize > 0 && _decodedBody.getSize() > _maxBodySize) {
-            _reqState = REQ_ERROR;
-            _statusCode = "413"; // Payload Too Large
-            return true;
-        }
-        _chunkBuffer.erase(0, totalBytesNeeded);
-    }
+		if (_chunkBuffer.size() < totalBytesNeeded)
+			break;
+		if (_chunkBuffer.substr(crlfPos + 2 + chunkSize, 2) != "\r\n") {
+			_reqState = REQ_ERROR;
+			_statusCode = "400"; // Malformed chunk formatting
+			return true;
+		}
+		if (chunkSize == 0) {
+			_chunkBuffer.erase(0, totalBytesNeeded);
+			_isBodyProcessed = true;
+			break;
+		}
 
-    if (_isBodyProcessed) {
-        _body = _decodedBody;
-        _chunkBuffer.clear();
-        return true;
-    }
-    return false; 
+		_decodedBody.append(_chunkBuffer.substr(crlfPos + 2, chunkSize));
+		if (_maxBodySize > 0 && _decodedBody.getSize() > _maxBodySize) {
+			_reqState = REQ_ERROR;
+			_statusCode = "413"; // Payload Too Large
+			return true;
+		}
+		_chunkBuffer.erase(0, totalBytesNeeded);
+	}
+
+	if (_isBodyProcessed) {
+		_body = _decodedBody;
+		_chunkBuffer.clear();
+		return true;
+	}
+	return false;
 }
 
 bool Request::isChunkedDone(const std::string& newData) const
 {
-    return newData.find("0\r\n\r\n") != std::string::npos;
+	return newData.find("0\r\n\r\n") != std::string::npos;
 }
 
 
 //  State Management Getters
 
 ReqState	Request::getReqState() const{
-    return _reqState;
+	return _reqState;
 }
 std::string	Request::getStatusCode() const{
-    return _statusCode;
+	return _statusCode;
 }
 
 // I don't know what to return here
 size_t		Request::getMaxBytesToRead() const{
-    return _maxBodySize;
+	return _maxBodySize;
 }
 
 size_t		Request::getTotalBytesRead() const{
-    return _totalBytesRead;
+	return _totalBytesRead;
 }
 bool		Request::isComplete() const{
-    return _reqState == REQ_DONE;
+	return _reqState == REQ_DONE;
 }
 
 DataStore&	Request::getBodyStore(){
-    return _body;
+	return _body;
 }
