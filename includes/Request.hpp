@@ -97,6 +97,7 @@ private:
 	long	long					_contentLength; // -1 for chunked requests.
 	//  Data
 	DataStore						 	_body;
+	DataStore						 	_decodedBody;
 	std::map<std::string, std::string>	_headers;
 
 	//  State Management
@@ -108,7 +109,9 @@ private:
 	//  Chunk Decoding State (filled per chunk)
 	size_t							  _chunkSize;
 	size_t							  _chunkDecodeOffset;
-	bool								_isBodyProcessed;   //set on \r\n\r\n
+	bool							  _isBodyProcessed;   //set on \r\n\r\n
+	std::string						  _chunkBuffer; // accumulates raw chunked data until we can decode a full chunk.
+	size_t							  _ramParsePos;
 
 	//  Private Parsing Helpers
 	void _parseRequestLine(const std::string& line);// parses the  METHOD  URI PROTOCOL line.

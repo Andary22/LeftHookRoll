@@ -172,6 +172,10 @@ int DataStore::getFd() const {
 	return _fileFd;
 }
 
+std::string DataStore::getFilePath() const {
+    return _absolutePath;
+}
+
 size_t DataStore::getSize() const {
 	return _currentSize;
 }
