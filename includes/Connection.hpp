@@ -12,10 +12,10 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 
-class Request;
-class Response;
-class ServerConf;
-class LocationConf;
+#include "ServerConf.hpp"
+#include "LocationConf.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
 
 /**
  * @enum ConnectionState
@@ -115,4 +115,9 @@ class Connection
 		 * @brief Updates the _lastActivity timestamp to current time.
 		 */
 		void _updateActivityTimer();
+
+		//  handleRead sub-routines
+		void _readHeaders(const char* buf, size_t n);
+		void _readBody(const char* buf, size_t n);
+		void _readChunked(const char* buf, size_t n);
 };
