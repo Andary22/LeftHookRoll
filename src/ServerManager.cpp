@@ -149,24 +149,48 @@ void ServerManager::run()
 				_acceptNewConnections(fd);
 				continue;
 			}
-
 			std::map<int, Connection*>::iterator it = _connections.find(fd);
 			if (it == _connections.end())
 				continue;
-
-			Connection* conn = it->second;
-
-			if (events & EPOLLIN)
-				conn->handleRead();
-			if (events & EPOLLOUT)
-				conn->handleWrite();
-			if (conn->getState() == ConnectionState::WRITING)
-				addPollFd(fd, EPOLLOUT | EPOLLIN);
-			if (conn->getState() == ConnectionState::FINISHED)
-				_dropConnection(fd);
+			_handleConnection(it->second, events);
 		}
 	}
 	std::cout << "\nServer shut down.\n";
+}
+
+void ServerManager::_handleConnection(Connection* conn, uint32_t events)
+{
+	int fd = conn->getFd();
+
+	if (events & EPOLLIN)
+		conn->handleRead();
+	if (conn->getState() == PROCESSING)
+		conn->process();
+
+	if ((events & EPOLLOUT) || conn->getState() == WRITING)
+		conn->handleWrite();
+
+	//epoll based on final state for next iteration
+	switch (conn->getState())
+	{
+		case READING:
+			addPollFd(fd, EPOLLIN);
+			break;
+		case PROCESSING:
+			std::cerr << "Warning: connection in PROCESSING state with EPOLLOUT event;\n";
+			addPollFd(fd, EPOLLIN);
+			break;
+		case WRITING:
+			addPollFd(fd, EPOLLIN | EPOLLOUT);
+			break;
+		case WAITING_FOR_CGI:
+			//waiting until CGI output is fully stored into datastore.
+			addPollFd(fd, 0);
+			break;
+		case FINISHED:
+			_dropConnection(fd);
+			break;
+	}
 }
 
 void ServerManager::addPollFd(int fd, uint32_t events)

@@ -88,13 +88,13 @@ class Connection
 
 	private:
 		//  Identity
-		int					 _acceptFD;
-		struct sockaddr_in	  _IPA;
-		time_t				  _lastActivity;
+		int						_acceptFD;
+		struct sockaddr_in		_IPA;
+		time_t					_lastActivity;
 
 		//  Config
-		const ServerConf* _serverConf;
-		const LocationConf* _locationConf;
+		const ServerConf*	_serverConf;
+		const LocationConf*	_locationConf;
 
 		//  Data
 		size_t				  _readBufferSize;
@@ -103,12 +103,12 @@ class Connection
 		Request* _request;
 		Response* _response;
 
-		size_t				_writeBufferSize;
-		std::string			_writeBuffer;
+		size_t		_writeBufferSize;
+		std::string	_writeBuffer;
 
 		//  Dynamic Data
-		ConnectionState		 _state;
-		size_t				  _totalBytesRead;
+		ConnectionState	_state;
+		size_t			_totalBytesRead;
 
 		//  Private Helpers
 		/**
