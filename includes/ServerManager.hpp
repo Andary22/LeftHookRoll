@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include "ServerConf.hpp"
+#include "Connection.hpp"
 
 #define BACKLOG 128
 #define RECV_BUFFER_SIZE 4096// keep this smaller than read buffer size in Connection.!
@@ -77,14 +78,16 @@ public:
 	const ServerConf* getServerConfForFd(int clientFd) const;
 
 private:
-	// Config mapping
-	std::map<struct sockaddr_in, const ServerConf*, SockAddrCompare> _interfacePortPairs;
-	std::vector<ServerConf*> _serverConfs;
+	// conf to address mapping for quick lookup on accept():
+	std::map<struct sockaddr_in, const ServerConf*, SockAddrCompare>	_interfacePortPairs;
+	std::vector<ServerConf*>											_serverConfs;
+	//connection to fd mapping on epoll events.
+	std::map<int, Connection*>	_connections;
 	// Event loop state
-	int								_epollFd;
-	std::vector<struct epoll_event>	_eventBuffer;
-	std::map<int, uint32_t>			_fdEvents;
-	std::set<int>					_listenFds;
+	int									_epollFd;
+	std::vector<struct epoll_event>		_eventBuffer;
+	std::map<int, uint32_t>				_fdEvents;
+	std::set<int>						_listenFds;
 
 	// Private helpers
 	/**
