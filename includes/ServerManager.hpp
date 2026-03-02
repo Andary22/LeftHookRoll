@@ -110,7 +110,13 @@ private:
 	bool _readAndPrint(int fd);
 
 	/**
-	 * @brief Closes a client fd and removes it from _pollfds.
+	 * @brief Dispatches epoll events to the correct Connection handler
+	 * and drives state transitions. Called from run() for every client event.
+	 */
+	void _handleConnection(Connection* conn, uint32_t events);
+
+	/**
+	 * @brief Closes a client fd and removes it from epoll and _connections.
 	 */
 	void _dropConnection(int fd);
 
