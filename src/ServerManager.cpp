@@ -100,13 +100,13 @@ void ServerManager::addServer(const ServerConf* conf)
 void ServerManager::addListenPort(int port)
 {
 	/**
-	 * @brief debuggign function to listen without needing a conf file.
+	 * @brief listen without needing a conf file.
 	 *
 	 */
 	struct sockaddr_in addr;
 	std::memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);//change to specific IP once we have parsing up and ready.
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_port = htons(port);
 
 	int fd = _createListeningSocket(addr);
@@ -134,8 +134,8 @@ void ServerManager::run()
 
 		for (int i = 0; i < ready; ++i)
 		{
-			int fd = _eventBuffer[i].data.fd;
-			uint32_t events = _eventBuffer[i].events;
+			int			fd = _eventBuffer[i].data.fd;
+			uint32_t	events = _eventBuffer[i].events;
 
 			if (events & (EPOLLHUP | EPOLLERR))
 			{
@@ -145,12 +145,28 @@ void ServerManager::run()
 			}
 
 			if (_listenFds.count(fd))
+			{
 				_acceptNewConnections(fd);
-			else if ((events & EPOLLIN) && !_readAndPrint(fd))//TODO: replace with actual request handling
+				continue;
+			}
+
+			std::map<int, Connection*>::iterator it = _connections.find(fd);
+			if (it == _connections.end())
+				continue;
+
+			Connection* conn = it->second;
+
+			if (events & EPOLLIN)
+				conn->handleRead();
+			if (events & EPOLLOUT)
+				conn->handleWrite();
+			if (conn->getState() == ConnectionState::WRITING)
+				addPollFd(fd, EPOLLOUT | EPOLLIN);
+			if (conn->getState() == ConnectionState::FINISHED)
 				_dropConnection(fd);
 		}
 	}
-	std::cout << "\nServer shut down." << std::endl;
+	std::cout << "\nServer shut down.\n";
 }
 
 void ServerManager::addPollFd(int fd, uint32_t events)
@@ -247,12 +263,15 @@ void ServerManager::_acceptNewConnections(int listenFd)
 			continue;
 		}
 
+		const ServerConf* conf = getServerConfForFd(clientFd);
+		Connection* conn = new Connection(clientFd, clientAddr, conf);
+		_connections[clientFd] = conn;
+		addPollFd(clientFd, EPOLLIN);
+
 		std::cout << "New connection from "
 				  << inet_ntoa(clientAddr.sin_addr) << ":"
 				  << ntohs(clientAddr.sin_port)
 				  << " [fd " << clientFd << "]" << std::endl;
-
-		addPollFd(clientFd, EPOLLIN);
 	}
 }
 
@@ -279,10 +298,27 @@ void ServerManager::_dropConnection(int fd)
 	epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL);
 	close(fd);
 	_fdEvents.erase(fd);
+
+	std::map<int, Connection*>::iterator it = _connections.find(fd);
+	if (it != _connections.end())
+	{
+		delete it->second;
+		_connections.erase(it);
+	}
+
 }
 
 void ServerManager::_closeAllFds()
 {
+
+	for(std::map<int, Connection*>::iterator it = _connections.begin();
+		it != _connections.end(); ++it)
+	{
+		close(it->first);
+		delete it->second;
+	}
+	_connections.clear();
+
 	for (std::map<int, uint32_t>::iterator it = _fdEvents.begin();
 		 it != _fdEvents.end(); ++it)
 	{
