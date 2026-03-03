@@ -6,4 +6,5 @@ SRCS= main.cpp \
 	ServerManager.cpp \
 	Request.cpp \
 	DataStore.cpp \
-	ConfigParser.cpp
+	ConfigParser.cpp \
+	CGIManager.cpp

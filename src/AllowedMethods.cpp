@@ -51,3 +51,14 @@ HTTPMethod AllowedMethods::stringToMethod(const std::string& methodStr)
 	else
 		return UNKNOWN_METHOD;
 }
+
+std::string methodToString(HTTPMethod method)
+{
+    if (method == GET)
+        return "GET";
+    if (method == POST)
+        return "POST";
+    if (method == DELETE)
+        return "DELETE";
+    return "UNKNOWN";
+}
