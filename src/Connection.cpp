@@ -94,36 +94,16 @@ Connection::~Connection()
 	delete _response;
 }
 
-// --- State Machine Actions ---
-
-void Connection::handleRead()
+// --- Getters & Setters ---
+int Connection::getFd() const { return _acceptFD; }
+ConnectionState Connection::getState() const { return _state; }
+void Connection::setState(ConnectionState state) { _state = state; }
+Response* Connection::getResponse() const { return _response; }
+void Connection::setLocationConf(const LocationConf* conf) { _locationConf = conf; }
+// --- Private Helpers ---
+void Connection::_updateActivityTimer()
 {
-	if (_state != READING)
-		return;
-
-	char buf[MAX_HEADER_SIZE];
-	ssize_t n = recv(_acceptFD, buf, sizeof(buf), 0);
-	if (n <= 0)
-	{
-		if (n < 0)
-			std::cerr << "recv error on client " << inet_ntoa(_IPA.sin_addr) <<
-					": " << strerror(errno) << std::endl;
-		_state = FINISHED;
-		return;
-	}
-
-	_updateActivityTimer();
-	_totalBytesRead += static_cast<size_t>(n);
-
-	ReqState rState = _request->getReqState();
-	size_t len = static_cast<size_t>(n);
-
-	if (rState == REQ_HEADERS)
-		_readHeaders(buf, len);
-	else if (rState == REQ_BODY)
-		_readBody(buf, len);
-	else if (rState == REQ_CHUNKED)
-		_readChunked(buf, len);
+	_lastActivity = time(NULL);
 }
 
 void Connection::_readHeaders(const char* buf, size_t n)
@@ -186,22 +166,33 @@ void Connection::_readChunked(const char* buf, size_t n)
 	if (_request->isChunkedDone(chunk))
 		_state = PROCESSING;
 }
-
-// --- Getters & Setters ---
-
-int Connection::getFd() const { return _acceptFD; }
-ConnectionState Connection::getState() const { return _state; }
-void Connection::setState(ConnectionState state) { _state = state; }
-Response* Connection::getResponse() const { return _response; }
-
-void Connection::setLocationConf(const LocationConf* conf)
+// --- State Machine Actions ---
+void Connection::handleRead()
 {
-	_locationConf = conf;
-}
+	if (_state != READING)
+		return;
 
-// --- Private Helpers ---
+	char buf[MAX_HEADER_SIZE];
+	ssize_t n = recv(_acceptFD, buf, sizeof(buf), 0);
+	if (n <= 0)
+	{
+		if (n < 0)
+			std::cerr << "recv error on client " << inet_ntoa(_IPA.sin_addr) <<
+					": " << strerror(errno) << std::endl;
+		_state = FINISHED;
+		return;
+	}
 
-void Connection::_updateActivityTimer()
-{
-	_lastActivity = time(NULL);
+	_updateActivityTimer();
+	_totalBytesRead += static_cast<size_t>(n);
+
+	ReqState rState = _request->getReqState();
+	size_t len = static_cast<size_t>(n);
+
+	if (rState == REQ_HEADERS)
+		_readHeaders(buf, len);
+	else if (rState == REQ_BODY)
+		_readBody(buf, len);
+	else if (rState == REQ_CHUNKED)
+		_readChunked(buf, len);
 }
