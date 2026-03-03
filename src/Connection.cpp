@@ -186,3 +186,22 @@ void Connection::_readChunked(const char* buf, size_t n)
 	if (_request->isChunkedDone(chunk))
 		_state = PROCESSING;
 }
+
+// --- Getters & Setters ---
+
+int Connection::getFd() const { return _acceptFD; }
+ConnectionState Connection::getState() const { return _state; }
+void Connection::setState(ConnectionState state) { _state = state; }
+Response* Connection::getResponse() const { return _response; }
+
+void Connection::setLocationConf(const LocationConf* conf)
+{
+	_locationConf = conf;
+}
+
+// --- Private Helpers ---
+
+void Connection::_updateActivityTimer()
+{
+	_lastActivity = time(NULL);
+}

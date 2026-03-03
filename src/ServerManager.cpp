@@ -177,7 +177,7 @@ void ServerManager::_handleConnection(Connection* conn, uint32_t events)
 			addPollFd(fd, EPOLLIN);
 			break;
 		case PROCESSING:
-			std::cerr << "Warning: connection in PROCESSING state with EPOLLOUT event;\n";
+			conn->process();//this is a very rare case; only for requests with bodies larger than 8kb.
 			addPollFd(fd, EPOLLIN);
 			break;
 		case WRITING:
