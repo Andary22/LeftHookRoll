@@ -336,6 +336,10 @@ size_t		Request::getMaxBytesToRead() const{
 	return _maxBodySize;
 }
 
+long long Request::getContentLength() const{
+	return _contentLength;
+}
+
 size_t		Request::getTotalBytesRead() const{
 	return _totalBytesRead;
 }
