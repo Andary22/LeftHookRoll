@@ -164,10 +164,25 @@ void Connection::_readHeaders(const char* buf, size_t n)
 			_state = PROCESSING;
 			return;
 		}
-		if (rState == REQ_BODY && _request->getBodyStore().getSize() >= static_cast<size_t>(_request->getMaxBytesToRead()))
+		if (rState == REQ_BODY && _request->getBodyStore().getSize() >= static_cast<size_t>(_request->getContentLength()))
 		{
 			_state = PROCESSING;
 			return;
 		}
 	}
+}
+
+void Connection::_readBody(const char* buf, size_t n)
+{
+	_request->getBodyStore().append(buf, n);
+	if (_request->getBodyStore().getSize() >= static_cast<size_t>(_request->getContentLength()))
+		_state = PROCESSING;
+}
+
+void Connection::_readChunked(const char* buf, size_t n)
+{
+	std::string chunk(buf, n);
+	_request->getBodyStore().append(chunk);
+	if (_request->isChunkedDone(chunk))
+		_state = PROCESSING;
 }
