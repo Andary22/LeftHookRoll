@@ -125,3 +125,49 @@ void Connection::handleRead()
 	else if (rState == REQ_CHUNKED)
 		_readChunked(buf, len);
 }
+
+void Connection::_readHeaders(const char* buf, size_t n)
+{
+	_readBuffer.append(buf, n);
+	if (_readBuffer.size() > MAX_HEADER_SIZE)
+	{
+		triggerError(431); // Request header too large.
+		return;
+	}
+
+	size_t headerEnd = _request->parseHeaders(_readBuffer);
+	if (_request->getReqState() == REQ_ERROR)
+	{
+		triggerError(400);
+		return;
+	}
+	if (_request->getReqState() == REQ_HEADERS)
+		return;
+
+	//saving body data that made its way into the buffer.
+	std::string leftover = _readBuffer.substr(headerEnd);
+	_readBuffer.clear();
+
+	ReqState rState = _request->getReqState();
+
+	if (rState == REQ_DONE)
+	{
+		_state = PROCESSING;
+		return;
+	}
+
+	if (!leftover.empty())
+	{
+		_request->getBodyStore().append(leftover);
+		if (rState == REQ_CHUNKED && _request->isChunkedDone(leftover))
+		{
+			_state = PROCESSING;
+			return;
+		}
+		if (rState == REQ_BODY && _request->getBodyStore().getSize() >= static_cast<size_t>(_request->getMaxBytesToRead()))
+		{
+			_state = PROCESSING;
+			return;
+		}
+	}
+}
