@@ -196,3 +196,66 @@ void Connection::handleRead()
 	else if (rState == REQ_CHUNKED)
 		_readChunked(buf, len);
 }
+
+void Connection::process()
+{
+	if (_state != PROCESSING)
+		return;
+
+	_updateActivityTimer();
+
+	if (_request->getReqState() == REQ_CHUNKED)
+	{
+		if (!_request->processBodySlice())
+			return; // still decoding chunked encoding.
+	}
+	//if anything went wrong at all;recheck that 200 is indeed the default in yaman's implemenation.
+	if (_request->getStatusCode() != "200")
+	{
+		triggerError(std::atoi(_request->getStatusCode().c_str()));
+		return;
+	}
+
+	if (_serverConf)
+		_response->buildResponse(*_request, *_serverConf);
+	else
+	{
+		//noconf fallback
+		triggerError(500);
+		return;
+	}
+	_state = WRITING;
+}
+
+void Connection::handleWrite()
+{
+	if (_state != WRITING)
+		return;
+	_updateActivityTimer();
+	if (_response->sendSlice(_acceptFD))
+		_state = FINISHED;
+}
+
+// --- Error & Timeout Management ---
+
+bool Connection::hasTimedOut(int timeoutSeconds) const
+{
+	return (time(NULL) - _lastActivity) >= timeoutSeconds;
+}
+
+void Connection::triggerError(int statusCode)
+{
+	std::ostringstream oss;
+	oss << statusCode;
+
+	if (_serverConf)
+		_response->buildErrorPage(oss.str(), *_serverConf);
+	else
+	{
+		// noconf fallback
+		_response->setStatusCode(oss.str());
+		_response->setResponsePhrase("Error");
+	}
+
+	_state = WRITING;
+}

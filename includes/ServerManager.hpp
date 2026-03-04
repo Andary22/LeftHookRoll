@@ -81,6 +81,7 @@ private:
 	// conf to address mapping for quick lookup on accept():
 	std::map<struct sockaddr_in, const ServerConf*, SockAddrCompare>	_interfacePortPairs;
 	std::vector<ServerConf*>											_serverConfs;
+	std::vector<Connection *> _processingSubset;
 	//connection to fd mapping on epoll events.
 	std::map<int, Connection*>	_connections;
 	// Event loop state
