@@ -1,0 +1,31 @@
+
+[2026-03-04 23:38:17] Test Suite Initialization
+[2026-03-04 23:38:17] Starting test suite in standard mode
+[2026-03-04 23:38:17] Project root: /home/yaman-alrifai/LeftHookRoll
+[2026-03-04 23:38:17] Tests directory: /home/yaman-alrifai/LeftHookRoll/tests
+
+[2026-03-04 23:38:17] Running Tests in standard Mode
+[2026-03-04 23:38:17] [INFO] Compiling test_cgi...
+/usr/bin/ld: /tmp/ccBRpjEm.o: warning: relocation against `g_running' in read-only section `.text'
+/usr/bin/ld: /tmp/ccBRpjEm.o: in function `ServerManager::run()':
+ServerManager.cpp:(.text+0x1277): undefined reference to `g_running'
+/usr/bin/ld: warning: creating DT_TEXTREL in a PIE
+collect2: error: ld returned 1 exit status
+[2026-03-04 23:38:20] [FAIL] Failed to compile test_cgi
+[2026-03-04 23:38:20] [INFO] Compiling test_config...
+/usr/bin/ld: /tmp/ccIPJOWO.o: warning: relocation against `g_running' in read-only section `.text'
+/usr/bin/ld: /tmp/ccIPJOWO.o: in function `ServerManager::run()':
+ServerManager.cpp:(.text+0x1277): undefined reference to `g_running'
+/usr/bin/ld: warning: creating DT_TEXTREL in a PIE
+collect2: error: ld returned 1 exit status
+[2026-03-04 23:38:22] [FAIL] Failed to compile test_config
+[2026-03-04 23:38:22] [INFO] Compiling test_request...
+/usr/bin/ld: /tmp/ccH0blDP.o: warning: relocation against `g_running' in read-only section `.text'
+/usr/bin/ld: /tmp/ccH0blDP.o: in function `ServerManager::run()':
+ServerManager.cpp:(.text+0x1277): undefined reference to `g_running'
+/usr/bin/ld: warning: creating DT_TEXTREL in a PIE
+collect2: error: ld returned 1 exit status
+[2026-03-04 23:38:25] [FAIL] Failed to compile test_request
+
+[2026-03-04 23:38:25] Test Summary
+[2026-03-04 23:38:25] Summary: 0/3 tests passed

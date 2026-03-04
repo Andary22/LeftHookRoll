@@ -52,7 +52,7 @@ HTTPMethod AllowedMethods::stringToMethod(const std::string& methodStr)
 		return UNKNOWN_METHOD;
 }
 
-std::string methodToString(HTTPMethod method)
+std::string AllowedMethods::methodToString(HTTPMethod method)
 {
     if (method == GET)
         return "GET";
