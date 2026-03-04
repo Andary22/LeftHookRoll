@@ -11,6 +11,10 @@
 #include "../includes/FatalExceptions.hpp"
 #include "../includes/ConfigParser.hpp"
 
+//turn in checklist:
+//verify sigint handling
+//remove all debugging disallowed functions:
+	//: inet_ntoa
 /*TEMP IMPLEMENTATION SO WE CAN CTRLC*/
 volatile sig_atomic_t g_running = 1;
 
