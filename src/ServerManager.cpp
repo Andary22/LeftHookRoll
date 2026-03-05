@@ -123,7 +123,8 @@ void ServerManager::run()
 		_runRoundRobin();
 		_sweepTimeouts();
 
-		int ePollTimeOut = _processingQueue.empty() ? -1 : 0;//-1 means that epoll will block until an event.
+		// Use a finite timeout so periodic tasks like _sweepTimeouts() still run when idle.
+		int ePollTimeOut = _processingQueue.empty() ? 1000 : 0; // ms; 0 = non-blocking when there is work.
 		int ready = epoll_wait(_epollFd, &_eventBuffer[0],
 			static_cast<int>(_eventBuffer.size()), ePollTimeOut);
 		if (ready <= 0)
