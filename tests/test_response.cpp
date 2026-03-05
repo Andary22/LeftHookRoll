@@ -221,7 +221,7 @@ static void testBuildErrorPage() {
         std::string heads  = headerOf(wire);
         std::string body   = bodyOf(wire);
 
-        check("status line starts with HTTP/1.1 404", heads.substr(0, 12) == "HTTP/1.1 404");
+        check("status line starts with HTTP/1.0 404", heads.substr(0, 12) == "HTTP/1.0 404");
         check("Content-Type is text/html",  headerValue(heads, "Content-Type") == "text/html");
         check("body contains 404",          body.find("404") != std::string::npos);
         check("Content-Length matches body",
@@ -232,7 +232,7 @@ static void testBuildErrorPage() {
         Response r;
         r.buildErrorPage("500", conf);
         std::string wire = drainResponse(r);
-        check("500 status line", headerOf(wire).substr(0, 12) == "HTTP/1.1 500");
+        check("500 status line", headerOf(wire).substr(0, 12) == "HTTP/1.0 500");
     }
 
     {
@@ -269,7 +269,7 @@ static void testBuildErrorPage() {
         r.buildErrorPage("403", conf2);
         std::string wire = drainResponse(r);
         check("re-build clears previous state",
-              headerOf(wire).substr(0, 12) == "HTTP/1.1 403");
+              headerOf(wire).substr(0, 12) == "HTTP/1.0 403");
     }
 }
 
@@ -330,7 +330,7 @@ static void testRouting() {
         std::string wire  = drainResponse(r);
         std::string heads = headerOf(wire);
         check("redirect yields 301",
-              heads.substr(0, 12) == "HTTP/1.1 301");
+              heads.substr(0, 12) == "HTTP/1.0 301");
         check("redirect has Location header",
               headerValue(heads, "Location") == "https://new.example.com/");
     }
@@ -560,7 +560,7 @@ static void testWireFormat() {
     r.buildResponse(req, conf);
     std::string wire = drainResponse(r);
 
-    check("wire starts with HTTP/1.1",     wire.substr(0, 8) == "HTTP/1.1");
+    check("wire starts with HTTP/1.0",     wire.substr(0, 8) == "HTTP/1.0");
     check("wire contains blank line sep",  wire.find("\r\n\r\n") != std::string::npos);
 
     std::string heads = headerOf(wire);

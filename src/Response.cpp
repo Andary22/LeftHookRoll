@@ -395,43 +395,45 @@ bool Response::_sendBodyFile(int fd)
 
 bool Response::_sendBodyDataStore(int fd)
 {
-    size_t bodyOffset    = _totalBytesSent - _headerBuffer.size();
-    size_t bodySize      = _responseDataStore.getSize();
-    size_t bodyRemaining = bodySize - bodyOffset;
-
-    if (bodyRemaining == 0)
-        return true;
-
-    size_t toSend = std::min(bodyRemaining, _writeBufferSize);
-    ssize_t sent  = 0;
+    size_t bodySize = _responseDataStore.getSize();
 
     if (_responseDataStore.getMode() == RAM)
     {
+        size_t bodyOffset    = _totalBytesSent - _headerBuffer.size();
+        size_t bodyRemaining = bodySize - bodyOffset;
+        if (bodyRemaining == 0)
+            return true;
+
+        size_t toSend = std::min(bodyRemaining, _writeBufferSize);
         const std::vector<char>& vec = _responseDataStore.getVector();
-        sent = send(fd, &vec[0] + bodyOffset, toSend, MSG_DONTWAIT);
+        ssize_t sent = send(fd, &vec[0] + bodyOffset, toSend, MSG_DONTWAIT);
+        if (sent <= 0)
+            return true;
+        _totalBytesSent += static_cast<size_t>(sent);
+        return (_totalBytesSent == _headerBuffer.size() + bodySize);
     }
-    else
+
+    if (_streamBufLen == 0)
     {
-        int storeFd = _responseDataStore.getFd();
-        if (lseek(storeFd, static_cast<off_t>(bodyOffset), SEEK_SET) < 0)
+        _streamBuf.resize(_writeBufferSize);
+        size_t bytesRead = _responseDataStore.read(&_streamBuf[0], _writeBufferSize);
+        if (bytesRead == 0)
             return true;
-
-        char buf[RESPONSE_SEND_CHUNK];
-        ssize_t bytesRead = read(storeFd, buf, toSend);
-        if (bytesRead <= 0)
-            return true;
-
-        sent = send(fd, buf, static_cast<size_t>(bytesRead), MSG_DONTWAIT);
+        _streamBufLen  = bytesRead;
+        _streamBufSent = 0;
     }
 
+    ssize_t sent = send(fd, &_streamBuf[0] + _streamBufSent,
+                        _streamBufLen - _streamBufSent, MSG_DONTWAIT);
     if (sent <= 0)
         return true;
+    _streamBufSent  += static_cast<size_t>(sent);
     _totalBytesSent += static_cast<size_t>(sent);
 
-    if (_totalBytesSent == _headerBuffer.size() + bodySize)
-        return true;
+    if (_streamBufSent == _streamBufLen)
+        _streamBufLen = 0;
 
-    return false;
+    return (_totalBytesSent == _headerBuffer.size() + bodySize);
 }
 
 
@@ -545,29 +547,17 @@ void Response::_handlePost(Request& req, const LocationConf& loc, const ServerCo
     } 
     else 
     {
-        int bodyFd = body.getFd();
-        if (lseek(bodyFd, 0, SEEK_SET) < 0) 
-        {
-            close(outFd);
-            buildErrorPage("500", config);
-            return;
-        }
+        body.resetReadPosition();
         char buf[4096];
-        ssize_t n;
-        while ((n = read(bodyFd, buf, sizeof(buf))) > 0) 
+        size_t n;
+        while ((n = body.read(buf, sizeof(buf))) > 0)
         {
-            if (write(outFd, buf, static_cast<size_t>(n)) != n) 
+            if (write(outFd, buf, n) != static_cast<ssize_t>(n))
             {
                 close(outFd);
                 buildErrorPage("500", config);
                 return;
             }
-        }
-        if (n < 0) 
-        {
-            close(outFd);
-            buildErrorPage("500", config);
-            return;
         }
     }
     close(outFd);
