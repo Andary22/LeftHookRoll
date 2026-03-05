@@ -5,7 +5,6 @@
 #include <cstring>
 #include <cerrno>
 #include <csignal>
-
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -100,13 +99,13 @@ void ServerManager::addServer(const ServerConf* conf)
 void ServerManager::addListenPort(int port)
 {
 	/**
-	 * @brief debuggign function to listen without needing a conf file.
+	 * @brief listen without needing a conf file.
 	 *
 	 */
 	struct sockaddr_in addr;
 	std::memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);//change to specific IP once we have parsing up and ready.
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_port = htons(port);
 
 	int fd = _createListeningSocket(addr);
@@ -121,21 +120,24 @@ void ServerManager::run()
 {
 	while (g_running)
 	{
+		_runRoundRobin();
+		_sweepTimeouts();
+
+		// Use a finite timeout so periodic tasks like _sweepTimeouts() still run when idle.
+		int ePollTimeOut = _processingQueue.empty() ? 1000 : 0; // ms; 0 = non-blocking when there is work.
 		int ready = epoll_wait(_epollFd, &_eventBuffer[0],
-			static_cast<int>(_eventBuffer.size()), EPOLL_TIMEOUT_MS);
-		if (ready < 0)
+			static_cast<int>(_eventBuffer.size()), ePollTimeOut);
+		if (ready <= 0)
 		{
-			if (errno == EINTR)
+			if (ready == 0 || errno == EINTR)
 				continue;
 			throw FatalException(std::string("epoll_wait(): ") + strerror(errno));
 		}
-		if (ready == 0)
-			continue;
 
 		for (int i = 0; i < ready; ++i)
 		{
-			int fd = _eventBuffer[i].data.fd;
-			uint32_t events = _eventBuffer[i].events;
+			int			fd = _eventBuffer[i].data.fd;
+			uint32_t	events = _eventBuffer[i].events;
 
 			if (events & (EPOLLHUP | EPOLLERR))
 			{
@@ -145,12 +147,53 @@ void ServerManager::run()
 			}
 
 			if (_listenFds.count(fd))
+			{
 				_acceptNewConnections(fd);
-			else if ((events & EPOLLIN) && !_readAndPrint(fd))//TODO: replace with actual request handling
-				_dropConnection(fd);
+				continue;
+			}
+			std::map<int, Connection*>::iterator it = _connections.find(fd);
+			if (it == _connections.end())
+				continue;
+			_handleConnection(it->second, events);
 		}
 	}
-	std::cout << "\nServer shut down." << std::endl;
+	std::cout << "\nServer shut down.\n";
+}
+
+void ServerManager::_handleConnection(Connection* conn, uint32_t events)
+{
+	int fd = conn->getFd();
+
+	if (events & EPOLLIN)
+	{
+		conn->handleRead();
+		if (conn->getState() == PROCESSING)
+			_enqueueProcessing(conn);
+	}
+	if ((events & EPOLLOUT) && conn->getState() == WRITING)
+		conn->handleWrite();
+
+	//epoll based on final state for next iteration
+	switch (conn->getState())
+	{
+		case READING:
+			addPollFd(fd, EPOLLIN);
+			break;
+		case PROCESSING:
+			addPollFd(fd, 0);
+			break;
+		case WRITING:
+			addPollFd(fd, EPOLLIN | EPOLLOUT);
+			break;
+		case WAITING_FOR_CGI:
+			//still deciding how we will handle CGI.
+			//waiting until CGI output is fully stored into datastore.
+			addPollFd(fd, EPOLLIN);
+			break;
+		case FINISHED:
+			_dropConnection(fd);
+			break;
+	}
 }
 
 void ServerManager::addPollFd(int fd, uint32_t events)
@@ -247,12 +290,15 @@ void ServerManager::_acceptNewConnections(int listenFd)
 			continue;
 		}
 
+		const ServerConf* conf = getServerConfForFd(clientFd);
+		Connection* conn = new Connection(clientFd, clientAddr, conf);
+		_connections[clientFd] = conn;
+		addPollFd(clientFd, EPOLLIN);
+
 		std::cout << "New connection from "
 				  << inet_ntoa(clientAddr.sin_addr) << ":"
 				  << ntohs(clientAddr.sin_port)
 				  << " [fd " << clientFd << "]" << std::endl;
-
-		addPollFd(clientFd, EPOLLIN);
 	}
 }
 
@@ -279,10 +325,114 @@ void ServerManager::_dropConnection(int fd)
 	epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL);
 	close(fd);
 	_fdEvents.erase(fd);
+
+	std::map<int, Connection*>::iterator it = _connections.find(fd);
+	if (it != _connections.end())
+	{
+		_dequeueProcessing(it->second);
+		delete it->second;
+		_connections.erase(it);
+	}
+}
+
+void ServerManager::_enqueueProcessing(Connection* conn)
+{
+	if (_processingSet.insert(conn).second)
+		_processingQueue.push_back(conn);
+}
+
+void ServerManager::_dequeueProcessing(Connection* conn)
+{
+	_processingSet.erase(conn);
+}
+
+void ServerManager::_runRoundRobin()
+{
+	size_t budget = BACKLOG / 2;
+	size_t processed = 0;
+
+	while (!_processingQueue.empty() && processed < budget)
+	{
+		Connection* conn = _processingQueue.front();
+		_processingQueue.pop_front();
+
+		//skip connections removed by _dropConnection
+		if (_processingSet.find(conn) == _processingSet.end())
+			continue;
+
+		conn->process();
+		++processed;
+
+		if (conn->getState() == PROCESSING)
+			_processingQueue.push_back(conn);
+		else
+		{
+			_processingSet.erase(conn);
+			_finalizeProcessed(conn);
+		}
+	}
+}
+
+void ServerManager::_finalizeProcessed(Connection* conn)
+{
+	int fd = conn->getFd();
+	switch (conn->getState())
+	{
+		case WRITING:
+			addPollFd(fd, EPOLLIN | EPOLLOUT);
+			break;
+		case WAITING_FOR_CGI:
+			//make sure to modify this too after CGIManager
+			addPollFd(fd, EPOLLIN);
+			break;
+		case FINISHED:
+			_dropConnection(fd);
+			break;
+		default:
+			break;
+	}
+}
+
+void ServerManager::_sweepTimeouts()
+{
+	static time_t lastSweep = 0;
+	time_t now = time(NULL);
+	if (now - lastSweep < 5) // sweep every 5 seconds at most.
+		return;
+	lastSweep = now;
+
+	std::vector<int> toDrop;
+	for (std::map<int, Connection*>::iterator it = _connections.begin();
+		 it != _connections.end(); ++it)
+	{
+		if (it->second->hasTimedOut(CONNECTION_TIMEOUT_S))
+			toDrop.push_back(it->first);
+	}
+	for (size_t i = 0; i < toDrop.size(); ++i)
+	{
+		std::map<int, Connection*>::iterator it = _connections.find(toDrop[i]);
+		if (it != _connections.end())
+		{
+			it->second->triggerError(408); // Request Timeout
+			_dequeueProcessing(it->second);
+			//sets state as WRITING and mods epoll.
+			_finalizeProcessed(it->second);
+		}
+	}
 }
 
 void ServerManager::_closeAllFds()
 {
+	_processingQueue.clear();
+	_processingSet.clear();
+
+	for(std::map<int, Connection*>::iterator it = _connections.begin();
+		it != _connections.end(); ++it)
+	{
+		delete it->second;
+	}
+	_connections.clear();
+
 	for (std::map<int, uint32_t>::iterator it = _fdEvents.begin();
 		 it != _fdEvents.end(); ++it)
 	{

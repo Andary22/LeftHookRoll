@@ -9,15 +9,18 @@
 
 #include <map>
 #include <set>
+#include <deque>
 #include <vector>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include "ServerConf.hpp"
+#include "Connection.hpp"
 
 #define BACKLOG 128
 #define RECV_BUFFER_SIZE 4096// keep this smaller than read buffer size in Connection.!
 #define EPOLL_TIMEOUT_MS 2500
+#define CONNECTION_TIMEOUT_S 60
 
 /**
  * @struct SockAddrCompare
@@ -77,14 +80,19 @@ public:
 	const ServerConf* getServerConfForFd(int clientFd) const;
 
 private:
-	// Config mapping
-	std::map<struct sockaddr_in, const ServerConf*, SockAddrCompare> _interfacePortPairs;
-	std::vector<ServerConf*> _serverConfs;
+	// conf to address mapping for quick lookup on accept():
+	std::map<struct sockaddr_in, const ServerConf*, SockAddrCompare>	_interfacePortPairs;
+	std::vector<ServerConf*>											_serverConfs;
+	// Round-robin processing scheduler
+	std::deque<Connection*>		_processingQueue;
+	std::set<Connection*>		_processingSet;
+	//connection to fd mapping on epoll events.
+	std::map<int, Connection*>	_connections;
 	// Event loop state
-	int								_epollFd;
-	std::vector<struct epoll_event>	_eventBuffer;
-	std::map<int, uint32_t>			_fdEvents;
-	std::set<int>					_listenFds;
+	int									_epollFd;
+	std::vector<struct epoll_event>		_eventBuffer;
+	std::map<int, uint32_t>				_fdEvents;
+	std::set<int>						_listenFds;
 
 	// Private helpers
 	/**
@@ -107,12 +115,48 @@ private:
 	bool _readAndPrint(int fd);
 
 	/**
-	 * @brief Closes a client fd and removes it from _pollfds.
+	 * @brief Dispatches epoll events to the correct Connection handler
+	 * and drives state transitions. Called from run() for every client event.
+	 */
+	void _handleConnection(Connection* conn, uint32_t events);
+
+	/**
+	 * @brief Runs a budgeted round-robin pass over _processingQueue.
+	 * Calls process() once per connection, re-enqueues if still PROCESSING,
+	 * budgeted to BACKLOG/2 per tick, which is arbitrary, tune as needed.
+	 * @warning tribute to Prof.waleed al-maqableh.
+	 */
+	void _runRoundRobin();
+
+	/**
+	 * @brief Closes a client fd and removes it from epoll and _connections.
 	 */
 	void _dropConnection(int fd);
 
 	/**
-	 * @brief Closes all fds (listeners + clients) during shutdown.
+	 * @brief Adds a connection to the processing queue if not already queued.
+	 */
+	void _enqueueProcessing(Connection* conn);
+
+	/**
+	 * @brief Removes a connection from the processing set (queue cleanup is lazy).
+	 */
+	void _dequeueProcessing(Connection* conn);
+
+	/**
+	 * @brief Handles state transition for a connection that just left PROCESSING.
+	 */
+	void _finalizeProcessed(Connection* conn);
+
+	/**
+	 * @brief Scans all connections and drops any that have been idle too long.
+	 */
+	void _sweepTimeouts();
+
+	/**
+	 * need to rename this.
+	 * its growing to an all encompassing cleanup function.
+	  @brief Closes all fds (listeners + clients) during shutdown.
 	 */
 	void _closeAllFds();
 };
