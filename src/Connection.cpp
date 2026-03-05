@@ -118,7 +118,7 @@ void Connection::_readHeaders(const char* buf, size_t n)
 	size_t headerEnd = _request->parseHeaders(_readBuffer);
 	if (_request->getReqState() == REQ_ERROR)
 	{
-		triggerError(400);
+		triggerError(std::atoi(_request->getStatusCode().c_str()));
 		return;
 	}
 	if (_request->getReqState() == REQ_HEADERS)
