@@ -8,3 +8,4 @@ SRCS= main.cpp \
 	Response.cpp \
 	Request.cpp \
 	DataStore.cpp \
+	Connection.cpp

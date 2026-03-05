@@ -65,6 +65,7 @@ public:
 
 	//  Getters
 
+	long long									getContentLength() const;
 	HTTPMethod									getMethod() const;
 	const std::string&							getURL() const;
 	const std::string&							getProtocol() const;

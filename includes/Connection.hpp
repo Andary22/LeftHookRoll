@@ -12,10 +12,10 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 
-class Request;
-class Response;
-class ServerConf;
-class LocationConf;
+#include "ServerConf.hpp"
+#include "LocationConf.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
 
 /**
  * @enum ConnectionState
@@ -88,13 +88,13 @@ class Connection
 
 	private:
 		//  Identity
-		int					 _acceptFD;
-		struct sockaddr_in	  _IPA;
-		time_t				  _lastActivity;
+		int						_acceptFD;
+		struct sockaddr_in		_IPA;
+		time_t					_lastActivity;
 
 		//  Config
-		const ServerConf* _serverConf;
-		const LocationConf* _locationConf;
+		const ServerConf*	_serverConf;
+		const LocationConf*	_locationConf;
 
 		//  Data
 		size_t				  _readBufferSize;
@@ -103,16 +103,21 @@ class Connection
 		Request* _request;
 		Response* _response;
 
-		size_t				_writeBufferSize;
-		std::string			_writeBuffer;
+		size_t		_writeBufferSize;
+		std::string	_writeBuffer;
 
 		//  Dynamic Data
-		ConnectionState		 _state;
-		size_t				  _totalBytesRead;
+		ConnectionState	_state;
+		size_t			_totalBytesRead;
 
 		//  Private Helpers
 		/**
 		 * @brief Updates the _lastActivity timestamp to current time.
 		 */
 		void _updateActivityTimer();
+
+		//  handleRead sub-routines
+		void _readHeaders(const char* buf, size_t n);
+		void _readBody(const char* buf, size_t n);
+		void _readChunked(const char* buf, size_t n);
 };
