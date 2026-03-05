@@ -4,7 +4,8 @@ SRCS= main.cpp \
 	LocationConf.cpp \
 	ServerConf.cpp \
 	ServerManager.cpp \
+	ConfigParser.cpp \
+	Response.cpp \
 	Request.cpp \
 	DataStore.cpp \
-	ConfigParser.cpp \
 	Connection.cpp

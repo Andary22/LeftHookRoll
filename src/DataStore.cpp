@@ -61,11 +61,11 @@ void DataStore::copy_fd_contents(const std::string& srcPath, int dstFd, size_t t
 }
 // Canonical Form
 
-DataStore::DataStore(): _mode(RAM), _bufferLimit(BUFFERLIMIT), _currentSize(0), _dataBuffer(), _fileFd(-1), _absolutePath()
+DataStore::DataStore(): _mode(RAM), _bufferLimit(BUFFERLIMIT), _currentSize(0), _readOffset(0), _dataBuffer(), _fileFd(-1), _absolutePath()
 {
 }
 
-DataStore::DataStore(const DataStore& other): _mode(RAM), _bufferLimit(other._bufferLimit), _currentSize(0), _dataBuffer(), _fileFd(-1), _absolutePath()
+DataStore::DataStore(const DataStore& other): _mode(RAM), _bufferLimit(other._bufferLimit), _currentSize(0), _readOffset(0), _dataBuffer(), _fileFd(-1), _absolutePath()
 {
 	if (other._mode == RAM) {
 		_mode = RAM;
@@ -96,6 +96,7 @@ DataStore& DataStore::operator=(DataStore other) {
     std::swap(_mode, other._mode);
     std::swap(_bufferLimit, other._bufferLimit);
     std::swap(_currentSize, other._currentSize);
+    std::swap(_readOffset, other._readOffset);
     std::swap(_dataBuffer, other._dataBuffer);
     std::swap(_fileFd, other._fileFd);
     std::swap(_absolutePath, other._absolutePath);
@@ -150,6 +151,7 @@ void DataStore::append(const std::string& data) {
 void DataStore::clear() {
 	_dataBuffer.clear();
 	_currentSize = 0;
+	_readOffset = 0;
 	_mode = RAM;
 	if (_fileFd != -1) {
 		::close(_fileFd);
@@ -178,6 +180,67 @@ std::string DataStore::getFilePath() const {
 
 size_t DataStore::getSize() const {
 	return _currentSize;
+}
+
+
+/**
+ * @brief Reads data from the store starting at the current read position.
+ * Advances the internal read position by the number of bytes read.
+ * @param buffer Pointer to the buffer to read into.
+ * @param length Maximum number of bytes to read.
+ * @return Number of bytes actually read (may be less if end of data is reached).
+ */
+size_t DataStore::read(char* buffer, size_t length) {
+    if (buffer == NULL || length == 0 || _readOffset >= _currentSize) {
+        return 0;
+    }
+
+    size_t available = _currentSize - _readOffset;
+    size_t toRead = std::min(length, available);
+
+    if (_mode == RAM) {
+        std::memcpy(buffer, &_dataBuffer[_readOffset], toRead);
+        _readOffset += toRead;
+        return toRead;
+    }
+    else {
+        size_t totalRead = 0;
+        while (totalRead < toRead) {
+            ssize_t bytesRead = ::read(_fileFd, buffer + totalRead, toRead - totalRead);
+            if (bytesRead < 0) {
+                if (errno == EINTR) continue;
+                throw std::runtime_error(std::string("DataStore: read failed - ") + std::strerror(errno));
+            }
+            if (bytesRead == 0) {
+                break; // EOF
+            }
+            totalRead += static_cast<size_t>(bytesRead);
+        }
+        _readOffset += totalRead;
+        return totalRead;
+    }
+}
+
+/**
+ * @brief Resets the internal read position to the beginning of the data.
+ */
+void DataStore::resetReadPosition() {
+    _readOffset = 0;
+    if (_mode == FILE_MODE && _fileFd != -1) {
+        ::close(_fileFd);
+        _fileFd = ::open(_absolutePath.c_str(), O_RDWR | O_APPEND, 0600);
+        if (_fileFd == -1) {
+            throw std::runtime_error("DataStore: Failed to reopen for reset");
+        }
+    }
+}
+
+/**
+ * @brief Gets the current read position.
+ * @return Current read offset.
+ */
+size_t DataStore::getReadPosition() const {
+    return _readOffset;
 }
 
 /**
@@ -217,7 +280,7 @@ void DataStore::_generateTempFileName() {
         ss << FILEPREFIX << file_counter++;
         currentName = ss.str();
         
-        fd = ::open(currentName.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
+        fd = ::open(currentName.c_str(), O_CREAT | O_EXCL | O_RDWR | O_APPEND, 0600);
         
         if (fd == -1) {
             if (errno == EEXIST) {
