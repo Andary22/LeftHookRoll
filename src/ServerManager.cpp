@@ -428,7 +428,6 @@ void ServerManager::_closeAllFds()
 	for(std::map<int, Connection*>::iterator it = _connections.begin();
 		it != _connections.end(); ++it)
 	{
-		close(it->first);
 		delete it->second;
 	}
 	_connections.clear();
