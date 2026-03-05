@@ -163,7 +163,7 @@ std::string extractFilenameFromUrl(const std::string& url)
 
 Response::Response()
     : _statusCode("200"),
-      _version("HTTP/1.1"),
+      _version("HTTP/1.0"),
       _response_phrase("OK"),
       _writeBufferSize(RESPONSE_SEND_CHUNK),
       _responseDataStore(),
@@ -317,113 +317,119 @@ void Response::buildErrorPage(const std::string& code, const ServerConf& config)
     _finalizeSuccess("text/html");
 }
 
-bool Response::sendSlice(int fd) 
+bool Response::sendSlice(int fd)
 {
-    if (_responseState == SENDING_RES_HEAD) 
-    {
-        size_t headerSize = _headerBuffer.size();
-        size_t remaining  = headerSize - _totalBytesSent;
-        size_t toSend     = std::min(remaining, _writeBufferSize);
+    if (_responseState == SENDING_RES_HEAD)
+        return _sendHeader(fd);
+    if (_responseState == SENDING_BODY_STATIC)
+        return _sendBodyStatic(fd);
+    return false;
+}
 
-        ssize_t sent = send(fd, _headerBuffer.c_str() + _totalBytesSent, toSend, MSG_DONTWAIT);
-        if (sent < 0) 
-        {
-            return true;
-        }
-        _totalBytesSent += static_cast<size_t>(sent);
+bool Response::_sendHeader(int fd)
+{
+    size_t headerSize = _headerBuffer.size();
+    size_t remaining  = headerSize - _totalBytesSent;
+    size_t toSend     = std::min(remaining, _writeBufferSize);
 
-        if (_totalBytesSent < headerSize)
-            return false;
+    ssize_t sent = send(fd, _headerBuffer.c_str() + _totalBytesSent, toSend, MSG_DONTWAIT);
+    if (sent <= 0)
+        return true;
+    _totalBytesSent += static_cast<size_t>(sent);
 
-        if (_responseDataStore.getSize() == 0 && _fileFd == -1)
-            return true;
-
-        _responseState = SENDING_BODY_STATIC;
-    }
-
-    if (_responseState == SENDING_BODY_STATIC) 
-    {
-        if (_fileFd != -1)
-        {
-            if (_streamBufLen == 0)
-            {
-                _streamBuf.resize(_writeBufferSize);
-                ssize_t bytesRead = read(_fileFd, &_streamBuf[0], _streamBuf.size());
-                if (bytesRead <= 0)
-                {
-                    close(_fileFd);
-                    _fileFd = -1;
-                    return true;
-                }
-                _streamBufLen  = static_cast<size_t>(bytesRead);
-                _streamBufSent = 0;
-            }
-
-            ssize_t sent = send(fd, &_streamBuf[0] + _streamBufSent,
-                                _streamBufLen - _streamBufSent, MSG_DONTWAIT);
-            if (sent < 0)
-            {
-                close(_fileFd);
-                _fileFd = -1;
-                return true;
-            }
-            _streamBufSent  += static_cast<size_t>(sent);
-            _totalBytesSent += static_cast<size_t>(sent);
-
-            if (_streamBufSent == _streamBufLen)
-                _streamBufLen = 0;
-
-            if (_totalBytesSent - _headerBuffer.size() >= _fileSize)
-            {
-                close(_fileFd);
-                _fileFd = -1;
-                return true;
-            }
-            return false;
-        }
-
-        size_t bodyOffset    = _totalBytesSent - _headerBuffer.size();
-        size_t bodySize      = _responseDataStore.getSize();
-        size_t bodyRemaining = bodySize - bodyOffset;
-
-        if (bodyRemaining == 0)
-            return true;
-
-        size_t toSend = std::min(bodyRemaining, _writeBufferSize);
-        ssize_t sent  = 0;
-
-        if (_responseDataStore.getMode() == RAM) 
-        {
-            const std::vector<char>& vec = _responseDataStore.getVector();
-            sent = send(fd, &vec[0] + bodyOffset, toSend, MSG_DONTWAIT);
-        }
-        else 
-        {
-            int storeFd = _responseDataStore.getFd();
-            if (lseek(storeFd, static_cast<off_t>(bodyOffset), SEEK_SET) < 0)
-                return true;
-
-            char buf[RESPONSE_SEND_CHUNK];
-            ssize_t bytesRead = read(storeFd, buf, toSend);
-            if (bytesRead <= 0)
-                return true;
-
-            sent = send(fd, buf, static_cast<size_t>(bytesRead), MSG_DONTWAIT);
-        }
-
-        if (sent < 0) 
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                return false;
-            return true;
-        }
-        _totalBytesSent += static_cast<size_t>(sent);
-
-        if (_totalBytesSent == _headerBuffer.size() + bodySize)
-            return true;
-
+    if (_totalBytesSent < headerSize)
         return false;
+
+    if (_responseDataStore.getSize() == 0 && _fileFd == -1)
+        return true;
+
+    _responseState = SENDING_BODY_STATIC;
+    return _sendBodyStatic(fd);
+}
+
+bool Response::_sendBodyStatic(int fd)
+{
+    if (_fileFd != -1)
+        return _sendBodyFile(fd);
+    return _sendBodyDataStore(fd);
+}
+
+bool Response::_sendBodyFile(int fd)
+{
+    if (_streamBufLen == 0)
+    {
+        _streamBuf.resize(_writeBufferSize);
+        ssize_t bytesRead = read(_fileFd, &_streamBuf[0], _streamBuf.size());
+        if (bytesRead <= 0)
+        {
+            close(_fileFd);
+            _fileFd = -1;
+            return true;
+        }
+        _streamBufLen  = static_cast<size_t>(bytesRead);
+        _streamBufSent = 0;
     }
+
+    ssize_t sent = send(fd, &_streamBuf[0] + _streamBufSent,
+                        _streamBufLen - _streamBufSent, MSG_DONTWAIT);
+    if (sent <= 0)
+    {
+        close(_fileFd);
+        _fileFd = -1;
+        return true;
+    }
+    _streamBufSent  += static_cast<size_t>(sent);
+    _totalBytesSent += static_cast<size_t>(sent);
+
+    if (_streamBufSent == _streamBufLen)
+        _streamBufLen = 0;
+
+    if (_totalBytesSent - _headerBuffer.size() >= _fileSize)
+    {
+        close(_fileFd);
+        _fileFd = -1;
+        return true;
+    }
+    return false;
+}
+
+bool Response::_sendBodyDataStore(int fd)
+{
+    size_t bodyOffset    = _totalBytesSent - _headerBuffer.size();
+    size_t bodySize      = _responseDataStore.getSize();
+    size_t bodyRemaining = bodySize - bodyOffset;
+
+    if (bodyRemaining == 0)
+        return true;
+
+    size_t toSend = std::min(bodyRemaining, _writeBufferSize);
+    ssize_t sent  = 0;
+
+    if (_responseDataStore.getMode() == RAM)
+    {
+        const std::vector<char>& vec = _responseDataStore.getVector();
+        sent = send(fd, &vec[0] + bodyOffset, toSend, MSG_DONTWAIT);
+    }
+    else
+    {
+        int storeFd = _responseDataStore.getFd();
+        if (lseek(storeFd, static_cast<off_t>(bodyOffset), SEEK_SET) < 0)
+            return true;
+
+        char buf[RESPONSE_SEND_CHUNK];
+        ssize_t bytesRead = read(storeFd, buf, toSend);
+        if (bytesRead <= 0)
+            return true;
+
+        sent = send(fd, buf, static_cast<size_t>(bytesRead), MSG_DONTWAIT);
+    }
+
+    if (sent <= 0)
+        return true;
+    _totalBytesSent += static_cast<size_t>(sent);
+
+    if (_totalBytesSent == _headerBuffer.size() + bodySize)
+        return true;
 
     return false;
 }

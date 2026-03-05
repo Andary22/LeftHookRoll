@@ -98,6 +98,11 @@ private:
 	void _finalizeSuccess(const std::string& contentType);
 	void _serveFile(const std::string& path, const ServerConf& config);
 
+	bool _sendHeader(int fd);
+	bool _sendBodyStatic(int fd);
+	bool _sendBodyFile(int fd);
+	bool _sendBodyDataStore(int fd);
+
 	//  Serialized header line (Status-Line + Headers + blank line) cached after build
 	std::string _headerBuffer;
 };
