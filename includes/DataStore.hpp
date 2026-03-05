@@ -83,11 +83,38 @@ public:
      */
     size_t getSize() const;
 
+    /**
+     * @brief Gets the absolute path of the temporary file.
+     * @warning Only valid if mode is FILE_MODE. should never use in normal operation, only for testing/debugging purposes.
+     */
+    std::string getFilePath() const;
+
+    /**
+     * @brief Reads data from the store starting at the current read position.
+     * Advances the internal read position by the number of bytes read.
+     * @param buffer Pointer to the buffer to read into.
+     * @param length Maximum number of bytes to read.
+     * @return Number of bytes actually read (may be less if end of data is reached).
+     */
+    size_t read(char* buffer, size_t length);
+
+    /**
+     * @brief Resets the internal read position to the beginning of the data.
+     */
+    void resetReadPosition();
+
+    /**
+     * @brief Gets the current read position.
+     * @return Current read offset.
+     */
+    size_t getReadPosition() const;
+
 private:
     //  Identity & State
     BufferMode          _mode;
     size_t              _bufferLimit;
     size_t              _currentSize;
+    size_t              _readOffset;
 
     //  RAM Storage
     std::vector<char>   _dataBuffer;

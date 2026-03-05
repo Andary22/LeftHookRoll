@@ -39,3 +39,15 @@ short AllowedMethods::getBitmap() const
 {
 	return _bitmap;
 }
+
+HTTPMethod AllowedMethods::stringToMethod(const std::string& methodStr)
+{
+	if (methodStr == "GET")
+		return GET;
+	else if (methodStr == "POST")
+		return POST;
+	else if (methodStr == "DELETE")
+		return DELETE;
+	else
+		return UNKNOWN_METHOD;
+}
