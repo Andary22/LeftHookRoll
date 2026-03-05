@@ -20,6 +20,7 @@
 #define BACKLOG 128
 #define RECV_BUFFER_SIZE 4096// keep this smaller than read buffer size in Connection.!
 #define EPOLL_TIMEOUT_MS 2500
+#define CONNECTION_TIMEOUT_S 60
 
 /**
  * @struct SockAddrCompare
@@ -148,7 +149,14 @@ private:
 	void _finalizeProcessed(Connection* conn);
 
 	/**
-	 * @brief Closes all fds (listeners + clients) during shutdown.
+	 * @brief Scans all connections and drops any that have been idle too long.
+	 */
+	void _sweepTimeouts();
+
+	/**
+	 * need to rename this.
+	 * its growing to an all encompassing cleanup function.
+	  @brief Closes all fds (listeners + clients) during shutdown.
 	 */
 	void _closeAllFds();
 };

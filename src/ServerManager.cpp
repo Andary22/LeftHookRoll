@@ -121,6 +121,7 @@ void ServerManager::run()
 	while (g_running)
 	{
 		_runRoundRobin();
+		_sweepTimeouts();
 
 		int ePollTimeOut = _processingQueue.empty() ? -1 : 0;//-1 means that epoll will block until an event.
 		int ready = epoll_wait(_epollFd, &_eventBuffer[0],
@@ -171,13 +172,14 @@ void ServerManager::_handleConnection(Connection* conn, uint32_t events)
 	if ((events & EPOLLOUT) && conn->getState() == WRITING)
 		conn->handleWrite();
 
-	//stat tr
+	//epoll based on final state for next iteration
 	switch (conn->getState())
 	{
 		case READING:
 			addPollFd(fd, EPOLLIN);
 			break;
 		case PROCESSING:
+			addPollFd(fd, 0);
 			break;
 		case WRITING:
 			addPollFd(fd, EPOLLIN | EPOLLOUT);
@@ -390,8 +392,38 @@ void ServerManager::_finalizeProcessed(Connection* conn)
 	}
 }
 
+void ServerManager::_sweepTimeouts()
+{
+	static time_t lastSweep = 0;
+	time_t now = time(NULL);
+	if (now - lastSweep < 5) // sweep every 5 seconds at most.
+		return;
+	lastSweep = now;
+
+	std::vector<int> toDrop;
+	for (std::map<int, Connection*>::iterator it = _connections.begin();
+		 it != _connections.end(); ++it)
+	{
+		if (it->second->hasTimedOut(CONNECTION_TIMEOUT_S))
+			toDrop.push_back(it->first);
+	}
+	for (size_t i = 0; i < toDrop.size(); ++i)
+	{
+		std::map<int, Connection*>::iterator it = _connections.find(toDrop[i]);
+		if (it != _connections.end())
+		{
+			it->second->triggerError(408); // Request Timeout
+			_dequeueProcessing(it->second);
+			//sets state as WRITING and mods epoll.
+			_finalizeProcessed(it->second);
+		}
+	}
+}
+
 void ServerManager::_closeAllFds()
 {
+	_processingQueue.clear();
+	_processingSet.clear();
 
 	for(std::map<int, Connection*>::iterator it = _connections.begin();
 		it != _connections.end(); ++it)
