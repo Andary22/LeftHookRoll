@@ -28,13 +28,11 @@ enum ResponseState
 
 class Response {
 public:
-	// Canonical Form
 	Response();
 	Response(const Response& other);
 	Response& operator=(const Response& other);
 	~Response();
 
-	//  Core Behavior
 	/**
 	 * @brief Analyzes the Request and Location settings to prepare the response.
 	 * Sets the status code, phrase, and loads the DataStore with content.
@@ -56,7 +54,6 @@ public:
 	 */
 	bool sendSlice(int fd);
 
-	//  Getters & Setters
 
 	const std::string&	  getStatusCode() const;
 	const std::string&	  getVersion() const;
@@ -72,31 +69,35 @@ public:
 	void addHeader(const std::string& key, const std::string& value);
 
 private:
-	//  Identity
 	std::string			 _statusCode;	  // e.g., "200"
 	std::string			 _version;		 // e.g., "HTTP/1.1"
 	std::string			 _response_phrase; // e.g., "OK"
 
-	//  Data
-	size_t								_writeBufferSize; // Max bytes to send per send() call
+	size_t								_writeBufferSize;
 	DataStore							_responseDataStore;
-	size_t								_totalBytesSent;  // Tracks progress through the DataStore
+	size_t								_totalBytesSent;
 	std::map<std::string, std::string>	_headers;
-	// CGI
-	CGIManager*				_cgiInstance;
-	size_t					_currentChunkSize;
+	int									_fileFd;		  // Open FD for the file being streamed; -1 when not in use
+	size_t								_fileSize;		// Total byte count from stat(); used for Content-Length and end detection
+	std::vector<char>					_streamBuf;	   // Holds the latest chunk read from _fileFd, retained across EAGAIN
+	size_t								_streamBufLen;	// How many bytes are currently valid in _streamBuf
+	size_t								_streamBufSent;  // How many of those bytes have been sent to the socket so far
+	CGIManager*							_cgiInstance;
+	size_t								_currentChunkSize;
 
-	//  State Management
 	ResponseState	_responseState;
 
 	//  Private Helpers
-	/**
-	 * @brief Formulates the header string based on headers map.
-	 */
 	std::string _generateHeaderString();
-
-	/**
-	 * @brief Looks up the standard Reason Phrase for a status code.
-	 */
 	std::string _lookupReasonPhrase(const std::string& code);
+
+	void _handleGet(const Request& req, const LocationConf& loc, const ServerConf& config);
+	void _handlePost(Request& req, const LocationConf& loc, const ServerConf& config);
+	void _handleDelete(const Request& req, const LocationConf& loc, const ServerConf& config);
+
+	void _finalizeSuccess(const std::string& contentType);
+	void _serveFile(const std::string& path, const ServerConf& config);
+
+	//  Serialized header line (Status-Line + Headers + blank line) cached after build
+	std::string _headerBuffer;
 };
