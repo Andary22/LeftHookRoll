@@ -9,6 +9,7 @@
 
 #include <map>
 #include <set>
+#include <deque>
 #include <vector>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -81,7 +82,9 @@ private:
 	// conf to address mapping for quick lookup on accept():
 	std::map<struct sockaddr_in, const ServerConf*, SockAddrCompare>	_interfacePortPairs;
 	std::vector<ServerConf*>											_serverConfs;
-	std::vector<Connection *> _processingSubset;
+	// Round-robin processing scheduler
+	std::deque<Connection*>		_processingQueue;
+	std::set<Connection*>		_processingSet;
 	//connection to fd mapping on epoll events.
 	std::map<int, Connection*>	_connections;
 	// Event loop state
@@ -117,9 +120,32 @@ private:
 	void _handleConnection(Connection* conn, uint32_t events);
 
 	/**
+	 * @brief Runs a budgeted round-robin pass over _processingQueue.
+	 * Calls process() once per connection, re-enqueues if still PROCESSING,
+	 * budgeted to BACKLOG/2 per tick, which is arbitrary, tune as needed.
+	 * @warning tribute to Prof.waleed al-maqableh.
+	 */
+	void _runRoundRobin();
+
+	/**
 	 * @brief Closes a client fd and removes it from epoll and _connections.
 	 */
 	void _dropConnection(int fd);
+
+	/**
+	 * @brief Adds a connection to the processing queue if not already queued.
+	 */
+	void _enqueueProcessing(Connection* conn);
+
+	/**
+	 * @brief Removes a connection from the processing set (queue cleanup is lazy).
+	 */
+	void _dequeueProcessing(Connection* conn);
+
+	/**
+	 * @brief Handles state transition for a connection that just left PROCESSING.
+	 */
+	void _finalizeProcessed(Connection* conn);
 
 	/**
 	 * @brief Closes all fds (listeners + clients) during shutdown.

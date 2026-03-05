@@ -5,7 +5,6 @@
 #include <cstring>
 #include <cerrno>
 #include <csignal>
-
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -121,16 +120,17 @@ void ServerManager::run()
 {
 	while (g_running)
 	{
+		_runRoundRobin();
+
+		int ePollTimeOut = _processingQueue.empty() ? -1 : 0;//-1 means that epoll will block until an event.
 		int ready = epoll_wait(_epollFd, &_eventBuffer[0],
-			static_cast<int>(_eventBuffer.size()), EPOLL_TIMEOUT_MS);
-		if (ready < 0)
+			static_cast<int>(_eventBuffer.size()), ePollTimeOut);
+		if (ready <= 0)
 		{
-			if (errno == EINTR)
+			if (ready == 0 || errno == EINTR)
 				continue;
 			throw FatalException(std::string("epoll_wait(): ") + strerror(errno));
 		}
-		if (ready == 0)
-			continue;
 
 		for (int i = 0; i < ready; ++i)
 		{
@@ -163,29 +163,29 @@ void ServerManager::_handleConnection(Connection* conn, uint32_t events)
 	int fd = conn->getFd();
 
 	if (events & EPOLLIN)
+	{
 		conn->handleRead();
-	if (conn->getState() == PROCESSING)
-		conn->process();
-
-	if ((events & EPOLLOUT) || conn->getState() == WRITING)
+		if (conn->getState() == PROCESSING)
+			_enqueueProcessing(conn);
+	}
+	if ((events & EPOLLOUT) && conn->getState() == WRITING)
 		conn->handleWrite();
 
-	//epoll based on final state for next iteration
+	//stat tr
 	switch (conn->getState())
 	{
 		case READING:
 			addPollFd(fd, EPOLLIN);
 			break;
 		case PROCESSING:
-			conn->process();//this is a very rare case; only for requests with bodies larger than 8kb.
-			addPollFd(fd, EPOLLIN);
 			break;
 		case WRITING:
 			addPollFd(fd, EPOLLIN | EPOLLOUT);
 			break;
 		case WAITING_FOR_CGI:
+			//still deciding how we will handle CGI.
 			//waiting until CGI output is fully stored into datastore.
-			addPollFd(fd, 0);
+			addPollFd(fd, EPOLLIN);
 			break;
 		case FINISHED:
 			_dropConnection(fd);
@@ -326,10 +326,68 @@ void ServerManager::_dropConnection(int fd)
 	std::map<int, Connection*>::iterator it = _connections.find(fd);
 	if (it != _connections.end())
 	{
+		_dequeueProcessing(it->second);
 		delete it->second;
 		_connections.erase(it);
 	}
+}
 
+void ServerManager::_enqueueProcessing(Connection* conn)
+{
+	if (_processingSet.insert(conn).second)
+		_processingQueue.push_back(conn);
+}
+
+void ServerManager::_dequeueProcessing(Connection* conn)
+{
+	_processingSet.erase(conn);
+}
+
+void ServerManager::_runRoundRobin()
+{
+	size_t budget = BACKLOG / 2;
+	size_t processed = 0;
+
+	while (!_processingQueue.empty() && processed < budget)
+	{
+		Connection* conn = _processingQueue.front();
+		_processingQueue.pop_front();
+
+		//skip connections removed by _dropConnection
+		if (_processingSet.find(conn) == _processingSet.end())
+			continue;
+
+		conn->process();
+		++processed;
+
+		if (conn->getState() == PROCESSING)
+			_processingQueue.push_back(conn);
+		else
+		{
+			_processingSet.erase(conn);
+			_finalizeProcessed(conn);
+		}
+	}
+}
+
+void ServerManager::_finalizeProcessed(Connection* conn)
+{
+	int fd = conn->getFd();
+	switch (conn->getState())
+	{
+		case WRITING:
+			addPollFd(fd, EPOLLIN | EPOLLOUT);
+			break;
+		case WAITING_FOR_CGI:
+			//make sure to modify this too after CGIManager
+			addPollFd(fd, EPOLLIN);
+			break;
+		case FINISHED:
+			_dropConnection(fd);
+			break;
+		default:
+			break;
+	}
 }
 
 void ServerManager::_closeAllFds()

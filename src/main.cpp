@@ -12,6 +12,7 @@
 #include "../includes/ConfigParser.hpp"
 
 //turn in checklist:
+//rename executable to webserv
 //verify sigint handling
 //remove all debugging disallowed functions:
 	//: inet_ntoa
@@ -23,7 +24,6 @@ static void signalHandler(int sig)
 	(void)sig;
 	g_running = 0;
 }
-/*TEMP IMPLEMENTATION SO WE CAN CTRLC*/
 
 int main(int argc, char** argv)
 {
