@@ -244,35 +244,10 @@ bool Request::processBodySlice()
 	if (_contentLength >= 0 || _isBodyProcessed || _reqState == REQ_ERROR)
 		return true;
 
-	if (_body.getMode() == RAM)
-	{
-		const std::vector<char>& vec = _body.getVector();
-
-		if (_ramParsePos < vec.size()) {
-			size_t bytesAvailable = vec.size() - _ramParsePos;
-			size_t bytesToCopy = (bytesAvailable > PARSE_BYTE_SLICE) ? PARSE_BYTE_SLICE : bytesAvailable;
-			_chunkBuffer.append(vec.begin() + _ramParsePos, vec.begin() + _ramParsePos + bytesToCopy);
-			_ramParsePos += bytesToCopy;
-		}
-	}
-	else
-	{
-		char buffer[PARSE_BYTE_SLICE];
-		ssize_t bytesRead = ::read(getBodyStore().getFd(), buffer, sizeof(buffer));
-		if (bytesRead < 0) {
-			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-				return false;
-			_reqState = REQ_ERROR;
-			_statusCode = "500";
-			return true;
-		}
-		if (bytesRead == 0 && _chunkBuffer.empty()) {
-			_reqState = REQ_ERROR;
-			_statusCode = "400";
-			return true;
-		}
-		_chunkBuffer.append(buffer, static_cast<size_t>(bytesRead));
-	}
+	std::vector<char> tempBuffer(PARSE_BYTE_SLICE);
+	size_t ReadBaytes = _body.read(&tempBuffer[0], tempBuffer.size());
+	_totalBytesRead += ReadBaytes;
+	_chunkBuffer += std::string(&tempBuffer[0], ReadBaytes);
 	while (true)
 	{
 		size_t crlfPos = _chunkBuffer.find("\r\n");
@@ -311,6 +286,7 @@ bool Request::processBodySlice()
 	if (_isBodyProcessed) {
 		_body = _decodedBody;
 		_chunkBuffer.clear();
+		_body.resetReadPosition();
 		return true;
 	}
 	return false;
