@@ -7,6 +7,8 @@
 #include <ctime>
 #include <iostream>
 
+// Static member definition
+std::set<pid_t> CGIManager::_activePids;
 
 namespace CGIUtils
 {
@@ -251,15 +253,15 @@ void CGIManager::_registerPid(pid_t pid)
 
 void CGIManager::_unregisterPid(pid_t pid)
 {
-    _activePids.erase(pid);
+    CGIManager::_activePids.erase(pid);
 }
 
 void CGIManager::cleanupAllProcesses()
 {
-    if (_activePids.empty())
+    if (CGIManager::_activePids.empty())
         return;
 
-    for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+    for (std::set<pid_t>::iterator it = CGIManager::_activePids.begin(); it != CGIManager::_activePids.end(); ++it)
     {
         kill(*it, SIGTERM);
     }
@@ -267,35 +269,35 @@ void CGIManager::cleanupAllProcesses()
     time_t startTime = time(NULL);
     const int GRACE_PERIOD = 5;
     
-    while (!_activePids.empty() && (time(NULL) - startTime) < GRACE_PERIOD)
+    while (!CGIManager::_activePids.empty() && (time(NULL) - startTime) < GRACE_PERIOD)
     {
         std::set<pid_t> remaining;
-        for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+        for (std::set<pid_t>::iterator it = CGIManager::_activePids.begin(); it != CGIManager::_activePids.end(); ++it)
         {
             int status;
             pid_t result = waitpid(*it, &status, WNOHANG);
             if (result == 0)
                 remaining.insert(*it);
         }
-        _activePids = remaining;
+        CGIManager::_activePids = remaining;
         
-        if (!_activePids.empty())
+        if (!CGIManager::_activePids.empty())
             usleep(100000);
     }
 
-    if (!_activePids.empty())
+    if (!CGIManager::_activePids.empty())
     {
-        for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+        for (std::set<pid_t>::iterator it = CGIManager::_activePids.begin(); it != CGIManager::_activePids.end(); ++it)
         {
             kill(*it, SIGKILL);
         }
     }
 
-    for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+    for (std::set<pid_t>::iterator it = CGIManager::_activePids.begin(); it != CGIManager::_activePids.end(); ++it)
     {
         int status;
         waitpid(*it, &status, 0);
     }
 
-    _activePids.clear();
+    CGIManager::_activePids.clear();
 }
