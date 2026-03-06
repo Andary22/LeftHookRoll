@@ -8,4 +8,5 @@ SRCS= main.cpp \
 	Response.cpp \
 	Request.cpp \
 	DataStore.cpp \
+	CGIManager.cpp \
 	Connection.cpp

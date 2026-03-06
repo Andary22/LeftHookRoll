@@ -221,8 +221,13 @@ void Request::_typeOfReq()
 
 std::string Request::getHeader(const std::string& key) const
 {
-	if (_headers.count(key))
-		return _headers.find(key)->second;
+	std::string keyCopy = key;
+	for (size_t i = 0; i < key.size(); ++i)
+	{
+		keyCopy[i] = std::tolower(static_cast<unsigned char>(keyCopy[i]));
+	}
+	if (_headers.count(keyCopy))
+		return _headers.find(keyCopy)->second;
 	return "";
 }
 
@@ -235,6 +240,8 @@ void Request::_parseHeaderLine(const std::string& line)
 	std::string key = RequestUtils::trim(line.substr(0, colonPos));
 	std::string value = RequestUtils::trim(line.substr(colonPos + 1));
 
+	for (size_t i = 0; i < key.size(); ++i)
+		key[i] = std::tolower(static_cast<unsigned char>(key[i]));
 	if (!key.empty())
 		_headers[key] = value;
 }

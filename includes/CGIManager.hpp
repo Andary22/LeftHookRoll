@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <set>
 #include <unistd.h>
 #include <sys/types.h>
 
@@ -51,6 +52,13 @@ class CGIManager
 		 */
 		 bool isDone();
 
+		 /**
+		 * @brief Cleans up all active CGI processes on server shutdown.
+		 * Sends SIGTERM to all processes, waits for them to finish, then sends SIGKILL
+		 * to any that remain. Prevents zombie processes.
+		 */
+		 static void cleanupAllProcesses();
+
 	private:
 	//Identity
 		pid_t	_pId;
@@ -67,4 +75,8 @@ class CGIManager
 		void	_prepExecveArrays();
 		void	_freeExecveArrays();
 		void	_closePipes();
+	
+	static std::set<pid_t> _activePids;
+	static void _registerPid(pid_t pid);
+	static void _unregisterPid(pid_t pid);
 };

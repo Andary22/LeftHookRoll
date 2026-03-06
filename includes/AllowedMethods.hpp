@@ -66,6 +66,7 @@ class AllowedMethods
 		 * @brief Converts a string representation of an HTTP method to its enum value.
 		 */
 		static HTTPMethod stringToMethod(const std::string& methodStr);
+		static std::string methodToString(HTTPMethod method);
 	private:
 		short _bitmap;
 };
