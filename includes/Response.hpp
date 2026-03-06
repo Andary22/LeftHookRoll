@@ -12,7 +12,6 @@
 #include "ServerConf.hpp"
 #include "Request.hpp"
 #include <map>
-#include "AllowedMethods.hpp"
 
 class CGIManager;
 
