@@ -3,6 +3,9 @@
 #include "../includes/AllowedMethods.hpp"
 
 #include <sys/wait.h>
+#include <csignal>
+#include <ctime>
+#include <iostream>
 
 
 namespace CGIUtils
@@ -122,6 +125,8 @@ void CGIManager::execute(int inputFd)
         execve(_execveArgv[0], _execveArgv, _execveEnvp);
         _exit(1);
     }
+    // Parent process - register the PID for tracking
+    _registerPid(_pId);
     close(_outPipe[1]);
     _outPipe[1] = -1;
 }
@@ -136,6 +141,8 @@ bool CGIManager::isDone()
     if (result == 0)
         return false; // still running
 
+    // Process has finished - unregister it
+    _unregisterPid(_pId);
     _pId = -1;
     return true;
 }
@@ -235,3 +242,60 @@ void CGIManager::_closePipes()
     }
 }
 
+
+void CGIManager::_registerPid(pid_t pid)
+{
+    if (pid > 0)
+        _activePids.insert(pid);
+}
+
+void CGIManager::_unregisterPid(pid_t pid)
+{
+    _activePids.erase(pid);
+}
+
+void CGIManager::cleanupAllProcesses()
+{
+    if (_activePids.empty())
+        return;
+
+    for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+    {
+        kill(*it, SIGTERM);
+    }
+
+    time_t startTime = time(NULL);
+    const int GRACE_PERIOD = 5;
+    
+    while (!_activePids.empty() && (time(NULL) - startTime) < GRACE_PERIOD)
+    {
+        std::set<pid_t> remaining;
+        for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+        {
+            int status;
+            pid_t result = waitpid(*it, &status, WNOHANG);
+            if (result == 0)
+                remaining.insert(*it);
+        }
+        _activePids = remaining;
+        
+        if (!_activePids.empty())
+            usleep(100000);
+    }
+
+    if (!_activePids.empty())
+    {
+        for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+        {
+            kill(*it, SIGKILL);
+        }
+    }
+
+    for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+    {
+        int status;
+        waitpid(*it, &status, 0);
+    }
+
+    _activePids.clear();
+}
