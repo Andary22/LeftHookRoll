@@ -669,7 +669,7 @@ void Response::_handleDelete(const Request& req, const LocationConf& loc, const 
 		return;
 	}
 
-	if (unlink(resolvedPath.c_str()) != 0)
+	if (std::remove(resolvedPath.c_str()) != 0)
 	{
 		if (errno == EACCES || errno == EPERM)
 			buildErrorPage("403", config);
