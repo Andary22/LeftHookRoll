@@ -294,6 +294,10 @@ bool Request::processBodySlice()
 		_body = _decodedBody;
 		_chunkBuffer.clear();
 		_body.resetReadPosition();
+    	std::stringstream ss;
+    	ss << _body.getSize();
+    	std::string str = ss.str();
+		_headers["content-length"] = str;
 		return true;
 	}
 	return false;
