@@ -12,7 +12,6 @@
 #include "ServerConf.hpp"
 #include "Request.hpp"
 #include <map>
-#include "AllowedMethods.hpp"
 
 class CGIManager;
 
@@ -27,6 +26,18 @@ enum ResponseState
 	SENDING_BODY_CHUNKED	// Sending CGI output using Chunked Transfer Coding
 };
 
+/**
+ * @enum BuildPhase
+ * @brief Tracks the incremental construction of the response body.
+ * exclusivly for POST.
+ */
+enum BuildPhase
+{
+	BUILD_IDLE,
+	BUILD_POST_WRITING,
+	BUILD_DONE
+};
+
 class Response {
 public:
 	Response();
@@ -37,8 +48,9 @@ public:
 	/**
 	 * @brief Analyzes the Request and Location settings to prepare the response.
 	 * Sets the status code, phrase, and loads the DataStore with content.
+	 * @return true if the response is finished, false if not.
 	 */
-	void buildResponse(Request& req, const ServerConf& config);
+	bool buildResponse(Request& req, const ServerConf& config);
 
 	/**
 	 * @brief Fast-tracks the response to an error state.
@@ -86,6 +98,13 @@ private:
 	CGIManager*							_cgiInstance;
 	size_t								_currentChunkSize;
 
+	// concurrent POST state.
+	BuildPhase							_buildPhase;
+	const ServerConf*					_cachedConfig;
+	int									_postOutFd;
+	size_t								_postWritePos;
+	std::string							_postFilename;
+
 	ResponseState	_responseState;
 
 	//  Private Helpers
@@ -93,7 +112,8 @@ private:
 	std::string _lookupReasonPhrase(const std::string& code);
 
 	void _handleGet(const Request& req, const LocationConf& loc, const ServerConf& config);
-	void _handlePost(Request& req, const LocationConf& loc, const ServerConf& config);
+	bool _handlePost(Request& req, const LocationConf& loc, const ServerConf& config);
+	bool _continuePostWrite(Request& req);
 	void _handleDelete(const Request& req, const LocationConf& loc, const ServerConf& config);
 
 	void _finalizeSuccess(const std::string& contentType);
