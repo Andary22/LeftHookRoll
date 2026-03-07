@@ -217,7 +217,10 @@ void Connection::process()
 	}
 
 	if (_serverConf)
-		_response->buildResponse(*_request, *_serverConf);
+	{
+		if (!_response->buildResponse(*_request, *_serverConf)) //if response isn't fully built, stay in RR queue.
+			return;
+	}
 	else
 	{
 		//noconf fallback
