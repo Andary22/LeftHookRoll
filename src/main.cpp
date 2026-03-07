@@ -13,6 +13,8 @@
 
 //turn in checklist:
 //rename executable to webserv
+// write README
+// write html pages and CGI scripts to showcase and test on.
 //verify sigint handling
 //remove all debugging disallowed functions:
 	//: inet_ntoa
