@@ -175,6 +175,10 @@ Response::Response()
 	  _streamBufSent(0),
 	  _cgiInstance(NULL),
 	  _currentChunkSize(0),
+	  _buildPhase(BUILD_IDLE),
+	  _cachedConfig(NULL),
+	  _postOutFd(-1),
+	  _postWritePos(0),
 	  _responseState(SENDING_RES_HEAD),
 	  _headerBuffer()
 {}
@@ -194,6 +198,11 @@ Response::Response(const Response& other)
 	  _streamBufSent(other._streamBufSent),
 	  _cgiInstance(NULL),
 	  _currentChunkSize(other._currentChunkSize),
+	  _buildPhase(other._buildPhase),
+	  _cachedConfig(other._cachedConfig),
+	  _postOutFd(-1),
+	  _postWritePos(other._postWritePos),
+	  _postFilename(other._postFilename),
 	  _responseState(other._responseState),
 	  _headerBuffer(other._headerBuffer)
 {}
@@ -217,6 +226,15 @@ Response& Response::operator=(const Response& other) {
 		_streamBufLen  = other._streamBufLen;
 		_streamBufSent = other._streamBufSent;
 		_currentChunkSize = other._currentChunkSize;
+		_buildPhase	   = other._buildPhase;
+		_cachedConfig  = other._cachedConfig;
+		if (_postOutFd != -1)
+		{
+			close(_postOutFd);
+			_postOutFd = -1;
+		}
+		_postWritePos  = other._postWritePos;
+		_postFilename  = other._postFilename;
 		_responseState	= other._responseState;
 		_headerBuffer	 = other._headerBuffer;
 		delete _cgiInstance;
@@ -228,29 +246,37 @@ Response& Response::operator=(const Response& other) {
 Response::~Response() {
 	if (_fileFd != -1)
 		close(_fileFd);
+	if (_postOutFd != -1)
+		close(_postOutFd);
 	delete _cgiInstance;
 }
 
 
-void Response::buildResponse(Request& req, const ServerConf& config)
+bool Response::buildResponse(Request& req, const ServerConf& config)
 {
+	// Resume incremental POST write if already in progress
+	if (_buildPhase == BUILD_POST_WRITING)
+		return _continuePostWrite(req);
+
+	_cachedConfig = &config;
+
 	if (req.getStatusCode() != "200")
 	{
 		buildErrorPage(req.getStatusCode(), config);
-		return;
+		return true;
 	}
 
 	const LocationConf* loc = matchLocation(req.getURL(), config);
 	if (!loc)
 	{
 		buildErrorPage("404", config);
-		return;
+		return true;
 	}
 
 	if (!loc->isMethodAllowed(req.getMethod()))
 	{
 		buildErrorPage("405", config);
-		return;
+		return true;
 	}
 
 	if (!loc->getReturnCode().empty())
@@ -264,17 +290,23 @@ void Response::buildResponse(Request& req, const ServerConf& config)
 		addHeader("Connection", "close");
 		_headerBuffer  = _generateHeaderString();
 		_responseState = SENDING_RES_HEAD;
-		return;
+		return true;
 	}
 
 	if (req.getMethod() == GET)
+	{
 		_handleGet(req, *loc, config);
-	else if (req.getMethod() == POST)
-		_handlePost(req, *loc, config);
-	else if (req.getMethod() == DELETE)
+		return true;
+	}
+	if (req.getMethod() == POST)
+		return _handlePost(req, *loc, config);
+	if (req.getMethod() == DELETE)
+	{
 		_handleDelete(req, *loc, config);
-	else
-		buildErrorPage("501", config);
+		return true;
+	}
+	buildErrorPage("501", config);
+	return true;
 }
 
 void Response::buildErrorPage(const std::string& code, const ServerConf& config)
@@ -291,6 +323,12 @@ void Response::buildErrorPage(const std::string& code, const ServerConf& config)
 	_fileSize	 = 0;
 	_streamBufLen = 0;
 	_streamBufSent = 0;
+	if (_postOutFd != -1)
+	{
+		close(_postOutFd);
+		_postOutFd = -1;
+	}
+	_buildPhase = BUILD_DONE;
 
 	_statusCode	  = code;
 	_response_phrase = _lookupReasonPhrase(code);
@@ -322,6 +360,7 @@ bool Response::sendSlice(int fd)
 		return _sendHeader(fd);
 	if (_responseState == SENDING_BODY_STATIC)
 		return _sendBodyStatic(fd);
+	//integrate CGI here
 	return false;
 }
 
@@ -503,13 +542,14 @@ void Response::_handleGet(const Request& req, const LocationConf& loc, const Ser
 	_serveFile(resolvedPath, config);
 }
 
-void Response::_handlePost(Request& req, const LocationConf& loc, const ServerConf& config) {
+bool Response::_handlePost(Request& req, const LocationConf& loc, const ServerConf& config)
+{
 	const std::string& storageDir = loc.getStorageLocation();
 
 	if (storageDir.empty())
 	{
 		buildErrorPage("501", config);
-		return;
+		return true;
 	}
 
 	std::string filename = extractFilenameFromUrl(req.getURL());
@@ -522,51 +562,83 @@ void Response::_handlePost(Request& req, const LocationConf& loc, const ServerCo
 
 	std::string destPath = storageDir + "/" + filename;
 
-	int outFd = open(destPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (outFd < 0)
+	_postOutFd = open(destPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (_postOutFd < 0)
 	{
 		buildErrorPage("500", config);
-		return;
+		return true;
 	}
 
+	_postWritePos = 0;
+	_postFilename = filename;
+	_buildPhase = BUILD_POST_WRITING;
+
 	DataStore& body = req.getBodyStore();
+	if (body.getMode() != RAM)
+		body.resetReadPosition();
+
+	return _continuePostWrite(req);
+}
+
+bool Response::_continuePostWrite(Request& req)
+{
+	DataStore& body = req.getBodyStore();
+	bool wroteAll = false;
+
 	if (body.getMode() == RAM)
 	{
 		const std::vector<char>& vec = body.getVector();
-		if (!vec.empty())
+		if (!vec.empty() && _postWritePos < vec.size())
 		{
-			ssize_t written = write(outFd, &vec[0], vec.size());
-			if (written < 0 || static_cast<size_t>(written) != vec.size())
+			size_t remaining = vec.size() - _postWritePos;
+			size_t toWrite = std::min(remaining, _writeBufferSize);
+			ssize_t written = write(_postOutFd, &vec[0] + _postWritePos, toWrite);
+			if (written <= 0)
 			{
-				close(outFd);
-				buildErrorPage("500", config);
-				return;
+				close(_postOutFd);
+				_postOutFd = -1;
+				_buildPhase = BUILD_DONE;
+				if (_cachedConfig)
+					buildErrorPage("500", *_cachedConfig);
+				return true;
 			}
+			_postWritePos += static_cast<size_t>(written);
 		}
+		wroteAll = (vec.empty() || _postWritePos >= vec.size());
 	}
 	else
 	{
-		body.resetReadPosition();
-		char buf[4096];
-		size_t n;
-		while ((n = body.read(buf, sizeof(buf))) > 0)
+		char buf[RESPONSE_SEND_CHUNK];
+		size_t n = body.read(buf, sizeof(buf));
+		if (n > 0)
 		{
-			if (write(outFd, buf, n) != static_cast<ssize_t>(n))
+			ssize_t written = write(_postOutFd, buf, n);
+			if (written < 0 || static_cast<size_t>(written) != n)
 			{
-				close(outFd);
-				buildErrorPage("500", config);
-				return;
+				close(_postOutFd);
+				_postOutFd = -1;
+				_buildPhase = BUILD_DONE;
+				if (_cachedConfig)
+					buildErrorPage("500", *_cachedConfig);
+				return true;
 			}
 		}
+		wroteAll = (body.getReadPosition() >= body.getSize());
 	}
-	close(outFd);
 
-	std::string responseBody = "<!DOCTYPE html>\r\n<html><body><p>File uploaded successfully.</p></body></html>";
-	_responseDataStore.append(responseBody);
+	if (!wroteAll)
+		return false;
+
+	close(_postOutFd);
+	_postOutFd = -1;
+	_buildPhase = BUILD_DONE;
+	std::string respBody = "<!DOCTYPE html>\r\n<html><body><p>File uploaded successfully.</p></body></html>";
+	_responseDataStore.append(respBody);
 	_statusCode	  = "201";
 	_response_phrase = "Created";
-	addHeader("Location", "/" + filename);
+	addHeader("Location", "/" + _postFilename);
 	_finalizeSuccess("text/html");
+	return true;
 }
 
 void Response::_handleDelete(const Request& req, const LocationConf& loc, const ServerConf& config)
