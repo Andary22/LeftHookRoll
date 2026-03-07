@@ -13,6 +13,8 @@
 #include <sstream>
 #include <cctype>
 #include <algorithm>
+#include <cstdio>
+
 
 static const size_t RESPONSE_SEND_CHUNK = 16384;
 
