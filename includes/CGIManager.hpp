@@ -10,7 +10,7 @@
 #include <set>
 #include <unistd.h>
 #include <sys/types.h>
-
+// run script --> prep enviroment and query string --> fork --> redirect output to pipe --> execve --> parent adds read end of pipe to epoll --> when pipe is ready, read output and send to client
 class Request;
 class CGIManager
 {
@@ -75,7 +75,7 @@ class CGIManager
 		void	_prepExecveArrays();
 		void	_freeExecveArrays();
 		void	_closePipes();
-	
+
 	static std::set<pid_t> _activePids;
 	static void _registerPid(pid_t pid);
 	static void _unregisterPid(pid_t pid);

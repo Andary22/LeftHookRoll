@@ -1,5 +1,6 @@
 #include "../includes/ServerManager.hpp"
 #include "../includes/FatalExceptions.hpp"
+#include "../includes/CGIManager.hpp"
 
 #include <iostream>
 #include <cstring>
@@ -78,6 +79,7 @@ ServerManager::~ServerManager()
 	for(size_t i = 0; i < _serverConfs.size(); i++)
 		delete _serverConfs[i];
 	_closeAllFds();
+	CGIManager::cleanupAllProcesses();
 }
 
 // --- Public Interface ---

@@ -14,17 +14,16 @@
 //turn in checklist:
 //rename executable to webserv
 // write README
-// write html pages and CGI scripts to showcase and test on.
+// write confs, html pages, and CGI scripts to showcase and test on.
 //verify sigint handling
-//remove all debugging disallowed functions:
+//remove all debugging disallowed functions (nm ts):
 	//: inet_ntoa
-/*TEMP IMPLEMENTATION SO WE CAN CTRLC*/
 volatile sig_atomic_t g_running = 1;
 
 static void signalHandler(int sig)
 {
 	(void)sig;
-	g_running = 0;
+	g_running = 0;	
 }
 
 int main(int argc, char** argv)

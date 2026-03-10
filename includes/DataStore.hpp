@@ -109,6 +109,12 @@ public:
      */
     size_t getReadPosition() const;
 
+    /**
+     * @brief Handles the transition from RAM to a temporary file on disk.
+     * Uses the immediate unlink() trick to ensure OS-level cleanup on crashes.
+     */
+    void switchToFileMode();
+
 private:
     //  Identity & State
     BufferMode          _mode;
@@ -124,11 +130,7 @@ private:
     std::string         _absolutePath;
 
     //  Private Helpers
-    /**
-     * @brief Handles the transition from RAM to a temporary file on disk.
-     * Uses the immediate unlink() trick to ensure OS-level cleanup on crashes.
-     */
-    void _switchToFileMode();
+
 
     /**
      * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
