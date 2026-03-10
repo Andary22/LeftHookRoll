@@ -11,9 +11,9 @@
 #include "DataStore.hpp"
 #include "ServerConf.hpp"
 #include "Request.hpp"
+#include "CGIManager.hpp"
 #include <map>
 
-class CGIManager;
 
 /**
  * @enum ResponseState
@@ -68,13 +68,13 @@ public:
 	bool sendSlice(int fd);
 
 
-	const std::string&	  getStatusCode() const;
-	const std::string&	  getVersion() const;
-	const std::string&	  getResponsePhrase() const;
-	ResponseState		   getResponseState() const;
+	const std::string&	getStatusCode() const;
+	const std::string&	getVersion() const;
+	const std::string&	getResponsePhrase() const;
+	ResponseState		getResponseState() const;
 
-	void setStatusCode(const std::string& code);
-	void setResponsePhrase(const std::string& phrase);
+	void				setStatusCode(const std::string& code);
+	void				setResponsePhrase(const std::string& phrase);
 
 	/**
 	* @brief Adds a header to the response (e.g., "Content-Type", "text/html").

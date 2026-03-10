@@ -5,7 +5,6 @@
 #include <sys/wait.h>
 #include <csignal>
 #include <ctime>
-#include <iostream>
 
 // Static member definition
 std::set<pid_t> CGIManager::_activePids;
@@ -34,7 +33,7 @@ namespace CGIUtils
     }
 }
 
-// Canonical Form 
+// Canonical Form
 
 CGIManager::CGIManager() : _pId(-1), _execveEnvp(NULL), _execveArgv(NULL)
 {
@@ -170,8 +169,7 @@ void CGIManager::_buildEnvMap(const Request& request, const std::string& scriptP
         _env["CONTENT_TYPE"] = ct;
 
     std::string cl = request.getHeader("content-length");
-    if (!cl.empty())
-        _env["CONTENT_LENGTH"] = cl;
+    _env["CONTENT_LENGTH"] = (cl.empty()? _env["CONTENT_LENGTH"] = "0" : _env["CONTENT_LENGTH"] = cl);
 
     const std::map<std::string, std::string>& headers = request.getHeaders();
     for (std::map<std::string, std::string>::const_iterator it = headers.begin();
@@ -268,7 +266,7 @@ void CGIManager::cleanupAllProcesses()
 
     time_t startTime = time(NULL);
     const int GRACE_PERIOD = 5;
-    
+
     while (!CGIManager::_activePids.empty() && (time(NULL) - startTime) < GRACE_PERIOD)
     {
         std::set<pid_t> remaining;
@@ -280,7 +278,7 @@ void CGIManager::cleanupAllProcesses()
                 remaining.insert(*it);
         }
         CGIManager::_activePids = remaining;
-        
+
         if (!CGIManager::_activePids.empty())
             usleep(100000);
     }
