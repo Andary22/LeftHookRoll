@@ -11,8 +11,7 @@ LocationConf::LocationConf(const LocationConf& other)
 	  _autoIndex(other._autoIndex),
 	  _defaultPage(other._defaultPage),
 	  _storageLocation(other._storageLocation),
-	  _cgiPass(other._cgiPass),
-	  _cgiExtensions(other._cgiExtensions)
+	  _cgiInterpreters(other._cgiInterpreters)
 {}
 
 LocationConf& LocationConf::operator=(const LocationConf& other)
@@ -27,8 +26,7 @@ LocationConf& LocationConf::operator=(const LocationConf& other)
 		_autoIndex       = other._autoIndex;
 		_defaultPage     = other._defaultPage;
 		_storageLocation = other._storageLocation;
-		_cgiPass         = other._cgiPass;
-		_cgiExtensions   = other._cgiExtensions;
+		_cgiInterpreters = other._cgiInterpreters;
 	}
 	return *this;
 }
@@ -108,32 +106,20 @@ bool LocationConf::isMethodAllowed(HTTPMethod method) const
 	return _allowedMethods.isAllowed(method);
 }
 
-const std::string& LocationConf::getCgiPass() const
+std::string LocationConf::getCgiInterpreter(const std::string& ext) const
 {
-	return _cgiPass;
+	std::map<std::string, std::string>::const_iterator it = _cgiInterpreters.find(ext);
+	if (it != _cgiInterpreters.end())
+		return it->second;
+	return "";
 }
 
-const std::vector<std::string>& LocationConf::getCgiExtensions() const
+void LocationConf::addCgiInterpreter(const std::string& ext, const std::string& interpreterPath)
 {
-	return _cgiExtensions;
-}
-
-void LocationConf::setCgiPass(const std::string& cgiPass)
-{
-	_cgiPass = cgiPass;
-}
-
-void LocationConf::addCgiExtension(const std::string& ext)
-{
-	_cgiExtensions.push_back(ext);
+	_cgiInterpreters[ext] = interpreterPath;
 }
 
 bool LocationConf::isCgiExtension(const std::string& ext) const
 {
-	for (size_t i = 0; i < _cgiExtensions.size(); ++i)
-	{
-		if (_cgiExtensions[i] == ext)
-			return true;
-	}
-	return false;
+	return _cgiInterpreters.find(ext) != _cgiInterpreters.end();
 }

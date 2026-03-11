@@ -8,7 +8,7 @@
 #pragma once
 
 #include <string>
-#include <vector>
+#include <map>
 #include "AllowedMethods.hpp"
 
 class LocationConf
@@ -30,8 +30,7 @@ class LocationConf
 		bool					getAutoIndex() const;
 		const std::string&		getDefaultPage() const;
 		const std::string&		getStorageLocation() const;
-		const std::string&		getCgiPass() const;
-		const std::vector<std::string>&	getCgiExtensions() const;
+		std::string				getCgiInterpreter(const std::string& ext) const;
 
 		//  Setters
 
@@ -43,8 +42,7 @@ class LocationConf
 		void setAutoIndex(bool autoIndex);
 		void setDefaultPage(const std::string& defaultPage);
 		void setStorageLocation(const std::string& storageLocation);
-		void setCgiPass(const std::string& cgiPass);
-		void addCgiExtension(const std::string& ext);
+		void addCgiInterpreter(const std::string& ext, const std::string& interpreterPath);
 
 		// Utility
 
@@ -73,6 +71,5 @@ class LocationConf
 		bool			_autoIndex;			// Directory listing flag
 		std::string		 _defaultPage;		// Default file to serve (e.g., "index.html")
 		std::string		 _storageLocation;	// Directory where uploaded files are saved
-		std::string		 _cgiPass;			// Interpreter path for CGI (e.g., "/usr/bin/python3")
-		std::vector<std::string>	_cgiExtensions;	// File extensions handled by CGI (e.g., ".py", ".pl")
+		std::map<std::string, std::string>	_cgiInterpreters;	// Extension -> interpreter path (e.g., ".py" -> "/usr/bin/python3")
 };
