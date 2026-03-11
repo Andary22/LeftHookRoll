@@ -10,11 +10,13 @@ LocationConf::LocationConf(const LocationConf& other)
 	  _returnCode(other._returnCode),
 	  _autoIndex(other._autoIndex),
 	  _defaultPage(other._defaultPage),
-	  _storageLocation(other._storageLocation)
+	  _storageLocation(other._storageLocation),
+	  _cgiPass(other._cgiPass),
+	  _cgiExtensions(other._cgiExtensions)
 {}
 
 LocationConf& LocationConf::operator=(const LocationConf& other)
-{//
+{
 	if (this != &other)
 	{
 		_path            = other._path;
@@ -25,6 +27,8 @@ LocationConf& LocationConf::operator=(const LocationConf& other)
 		_autoIndex       = other._autoIndex;
 		_defaultPage     = other._defaultPage;
 		_storageLocation = other._storageLocation;
+		_cgiPass         = other._cgiPass;
+		_cgiExtensions   = other._cgiExtensions;
 	}
 	return *this;
 }
@@ -102,4 +106,34 @@ void LocationConf::addAllowedMethod(HTTPMethod method)
 bool LocationConf::isMethodAllowed(HTTPMethod method) const
 {
 	return _allowedMethods.isAllowed(method);
+}
+
+const std::string& LocationConf::getCgiPass() const
+{
+	return _cgiPass;
+}
+
+const std::vector<std::string>& LocationConf::getCgiExtensions() const
+{
+	return _cgiExtensions;
+}
+
+void LocationConf::setCgiPass(const std::string& cgiPass)
+{
+	_cgiPass = cgiPass;
+}
+
+void LocationConf::addCgiExtension(const std::string& ext)
+{
+	_cgiExtensions.push_back(ext);
+}
+
+bool LocationConf::isCgiExtension(const std::string& ext) const
+{
+	for (size_t i = 0; i < _cgiExtensions.size(); ++i)
+	{
+		if (_cgiExtensions[i] == ext)
+			return true;
+	}
+	return false;
 }

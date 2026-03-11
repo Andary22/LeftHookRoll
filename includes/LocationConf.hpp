@@ -8,6 +8,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "AllowedMethods.hpp"
 
 class LocationConf
@@ -29,6 +30,8 @@ class LocationConf
 		bool					getAutoIndex() const;
 		const std::string&		getDefaultPage() const;
 		const std::string&		getStorageLocation() const;
+		const std::string&		getCgiPass() const;
+		const std::vector<std::string>&	getCgiExtensions() const;
 
 		//  Setters
 
@@ -40,6 +43,8 @@ class LocationConf
 		void setAutoIndex(bool autoIndex);
 		void setDefaultPage(const std::string& defaultPage);
 		void setStorageLocation(const std::string& storageLocation);
+		void setCgiPass(const std::string& cgiPass);
+		void addCgiExtension(const std::string& ext);
 
 		// Utility
 
@@ -49,6 +54,13 @@ class LocationConf
 		 * @return true if allowed, false otherwise.
 		 */
 		bool isMethodAllowed(HTTPMethod method) const;
+
+		/**
+		 * @brief Checks if a given file extension should be handled by CGI.
+		 * @param ext The extension including the dot (e.g., ".py").
+		 * @return true if this extension is configured as a CGI extension.
+		 */
+		bool isCgiExtension(const std::string& ext) const;
 
 	private:
 		//  Identity
@@ -61,4 +73,6 @@ class LocationConf
 		bool			_autoIndex;			// Directory listing flag
 		std::string		 _defaultPage;		// Default file to serve (e.g., "index.html")
 		std::string		 _storageLocation;	// Directory where uploaded files are saved
+		std::string		 _cgiPass;			// Interpreter path for CGI (e.g., "/usr/bin/python3")
+		std::vector<std::string>	_cgiExtensions;	// File extensions handled by CGI (e.g., ".py", ".pl")
 };
