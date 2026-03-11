@@ -16,14 +16,30 @@
 // write README
 // write confs, html pages, and CGI scripts to showcase and test on.
 //verify sigint handling
-//remove all debugging disallowed functions (nm ts):
+//remove all debugging disallowed functions (nm ts, o alternatively, comment .h and check errors):
 	//: inet_ntoa
+//verify we throw on: (-;
+	//parsing errors
+	//syscalls
+//catch thrown exceptions )-:
+//test cases (adding those as I think of them, if you have an idea feel free to add it to the list:)
+	//mix n match interpreters (E.g. .py with bash) [_]
+	//script with no execute permissions [_]
+	//nonexistent script [_]
+	//nonexistent interpreter [_]
+	//omit interpreter to test auto-detection. [_]
+	//test huge request body handling with a CGI script that prints the body back out. [_]
+	//test that CGI timeout works by using a script that sleeps for longer than the timeout. [_]
+	//test client disconnect during CGI execution don't leave zombies [_]
+	//test redirects [_]
+	//test autoindex [_]
+	//test error pages (e.g. 404, 413, 500) [_]
 volatile sig_atomic_t g_running = 1;
 
 static void signalHandler(int sig)
 {
 	(void)sig;
-	g_running = 0;	
+	g_running = 0;
 }
 
 int main(int argc, char** argv)
