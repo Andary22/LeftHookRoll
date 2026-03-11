@@ -10,7 +10,6 @@
 #include <set>
 #include <unistd.h>
 #include <sys/types.h>
-// run script --> prep enviroment and query string --> fork --> redirect output to pipe --> execve --> parent adds read end of pipe to epoll --> when pipe is ready, read output and send to client
 class Request;
 class CGIManager
 {
@@ -33,8 +32,9 @@ class CGIManager
 		 * @brief Prepares the environment and arguments for executing a CGI script.
 		 * @param request the parsed HTTP request.
 		 * @param scriptPath the absolute path to the script to be executed.
+		 * @param interpreterOverride if non-empty, use this interpreter instead of auto-detecting from extension.
 		 */
-		void prepare(const Request& request, const std::string& scriptPath);
+		void prepare(const Request& request, const std::string& scriptPath, const std::string& interpreterOverride = "");
 
 		/**
 		 * @brief Forks, redirs input file and outpipe, and executes the CGI script.

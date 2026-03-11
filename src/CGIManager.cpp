@@ -6,7 +6,7 @@
 #include <csignal>
 #include <ctime>
 
-// Static member definition
+//There's a zombie on your lawn...
 std::set<pid_t> CGIManager::_activePids;
 
 namespace CGIUtils
@@ -85,13 +85,16 @@ int CGIManager::getOutputFd() const
 
 // Public Behaviour
 
-void CGIManager::prepare(const Request& request, const std::string& scriptPath)
+void CGIManager::prepare(const Request& request, const std::string& scriptPath, const std::string& interpreterOverride)
 {
     _buildEnvMap(request, scriptPath);
 
-    // Build argv: [interpreter, scriptPath] or just [scriptPath]
     _scriptArgv.clear();
-    std::string interp = CGIUtils::interpreterForScript(scriptPath);
+    std::string interp;
+    if (!interpreterOverride.empty())
+        interp = interpreterOverride;
+    else
+        interp = CGIUtils::interpreterForScript(scriptPath);
     if (!interp.empty())
         _scriptArgv.push_back(interp);
     _scriptArgv.push_back(scriptPath);
