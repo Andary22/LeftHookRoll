@@ -21,6 +21,7 @@
 #define RECV_BUFFER_SIZE 4096// keep this smaller than read buffer size in Connection.!
 #define EPOLL_TIMEOUT_MS 2500
 #define CONNECTION_TIMEOUT_S 60
+#define CGI_TIMEOUT_S 10
 
 /**
  * @struct SockAddrCompare
@@ -88,6 +89,9 @@ private:
 	std::set<Connection*>		_processingSet;
 	//connection to fd mapping on epoll events.
 	std::map<int, Connection*>	_connections;
+	// CGI pipe fd -> owning Connection
+	std::map<int, Connection*>	_cgiPipeToConn;
+	std::map<int, time_t>		_cgiStartTimes;
 	// Event loop state
 	int									_epollFd;
 	std::vector<struct epoll_event>		_eventBuffer;
@@ -152,6 +156,26 @@ private:
 	 * @brief Scans all connections and drops any that have been idle too long.
 	 */
 	void _sweepTimeouts();
+
+	/**
+	 * @brief Registers a CGI pipe fd in epoll and maps it to its Connection.
+	 */
+	void _registerCgiPipe(Connection* conn);
+
+	/**
+	 * @brief Unregisters a CGI pipe fd from epoll and removes the mapping.
+	 */
+	void _unregisterCgiPipe(int pipeFd);
+
+	/**
+	 * @brief Handles an epoll event on a CGI pipe fd.
+	 */
+	void _handleCgiPipeEvent(int pipeFd, uint32_t events);
+
+	/**
+	 * @brief Sweeps CGI processes for timeout.
+	 */
+	void _sweepCgiTimeouts();
 
 	/**
 	 * need to rename this.

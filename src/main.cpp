@@ -22,6 +22,7 @@
 	//parsing errors
 	//syscalls
 //catch thrown exceptions )-:
+//test CGI's and merge to main if it passes 🙏
 //test cases (adding those as I think of them, if you have an idea feel free to add it to the list:)
 	//mix n match interpreters (E.g. .py with bash) [_]
 	//script with no execute permissions [_]
@@ -34,6 +35,8 @@
 	//test redirects [_]
 	//test autoindex [_]
 	//test error pages (e.g. 404, 413, 500) [_]
+	//eval sheet test cases [_]
+	//test with the provided test suite once we have a stable implementation [_]
 volatile sig_atomic_t g_running = 1;
 
 static void signalHandler(int sig)

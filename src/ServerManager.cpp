@@ -124,6 +124,7 @@ void ServerManager::run()
 	{
 		_runRoundRobin();
 		_sweepTimeouts();
+		_sweepCgiTimeouts();
 
 		// Use a finite timeout so periodic tasks like _sweepTimeouts() still run when idle.
 		int ePollTimeOut = _processingQueue.empty() ? 1000 : 0; // ms; 0 = non-blocking when there is work.
@@ -151,6 +152,11 @@ void ServerManager::run()
 			if (_listenFds.count(fd))
 			{
 				_acceptNewConnections(fd);
+				continue;
+			}
+			if (_cgiPipeToConn.count(fd))
+			{
+				_handleCgiPipeEvent(fd, events);
 				continue;
 			}
 			std::map<int, Connection*>::iterator it = _connections.find(fd);
@@ -188,9 +194,8 @@ void ServerManager::_handleConnection(Connection* conn, uint32_t events)
 			addPollFd(fd, EPOLLIN | EPOLLOUT);
 			break;
 		case WAITING_FOR_CGI:
-			//still deciding how we will handle CGI.
-			//waiting until CGI output is fully stored into datastore.
-			addPollFd(fd, EPOLLIN);
+			// Client fd is idle while CGI runs; pipe fd handles I/O
+			addPollFd(fd, 0);
 			break;
 		case FINISHED:
 			_dropConnection(fd);
@@ -324,17 +329,22 @@ bool ServerManager::_readAndPrint(int fd)
 
 void ServerManager::_dropConnection(int fd)
 {
-	epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL);
-	close(fd);
-	_fdEvents.erase(fd);
-
 	std::map<int, Connection*>::iterator it = _connections.find(fd);
 	if (it != _connections.end())
 	{
+		// Clean up any associated CGI pipe
+		int pipeFd = it->second->getCgiPipeFd();
+		if (pipeFd >= 0)
+			_unregisterCgiPipe(pipeFd);
+
 		_dequeueProcessing(it->second);
 		delete it->second;
 		_connections.erase(it);
 	}
+
+	epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL);
+	close(fd);
+	_fdEvents.erase(fd);
 }
 
 void ServerManager::_enqueueProcessing(Connection* conn)
@@ -384,14 +394,100 @@ void ServerManager::_finalizeProcessed(Connection* conn)
 			addPollFd(fd, EPOLLIN | EPOLLOUT);
 			break;
 		case WAITING_FOR_CGI:
-			//make sure to modify this too after CGIManager
-			addPollFd(fd, EPOLLIN);
+			// Unsubscribe client fd from epoll (it's idle during CGI)
+			addPollFd(fd, 0);
+			// Register the CGI pipe fd in epoll for reading
+			_registerCgiPipe(conn);
 			break;
 		case FINISHED:
 			_dropConnection(fd);
 			break;
 		default:
 			break;
+	}
+}
+
+void ServerManager::_registerCgiPipe(Connection* conn)
+{
+	int pipeFd = conn->getCgiPipeFd();
+	if (pipeFd < 0)
+		return;
+	_cgiPipeToConn[pipeFd] = conn;
+	_cgiStartTimes[pipeFd] = time(NULL);
+	addPollFd(pipeFd, EPOLLIN);
+}
+
+void ServerManager::_unregisterCgiPipe(int pipeFd)
+{
+	if (pipeFd < 0)
+		return;
+	epoll_ctl(_epollFd, EPOLL_CTL_DEL, pipeFd, NULL);
+	_fdEvents.erase(pipeFd);
+	_cgiPipeToConn.erase(pipeFd);
+	_cgiStartTimes.erase(pipeFd);
+}
+
+void ServerManager::_handleCgiPipeEvent(int pipeFd, uint32_t events)
+{
+	std::map<int, Connection*>::iterator it = _cgiPipeToConn.find(pipeFd);
+	if (it == _cgiPipeToConn.end())
+		return;
+
+	Connection* conn = it->second;
+	Response* resp = conn->getResponse();
+
+	bool done = false;
+	if (events & (EPOLLHUP | EPOLLERR))
+		done = true;
+	else if (events & EPOLLIN)
+		done = resp->readCgiOutput();
+
+	if (done)
+	{
+		_unregisterCgiPipe(pipeFd);
+		resp->finalizeCgiResponse();
+		conn->setState(WRITING);
+		addPollFd(conn->getFd(), EPOLLIN | EPOLLOUT);
+	}
+}
+
+void ServerManager::_sweepCgiTimeouts()
+{
+	if (_cgiPipeToConn.empty())
+		return;
+
+	time_t now = time(NULL);
+	std::vector<int> toKill;
+
+	for (std::map<int, time_t>::iterator it = _cgiStartTimes.begin();
+		 it != _cgiStartTimes.end(); ++it)
+	{
+		if (now - it->second >= CGI_TIMEOUT_S)
+			toKill.push_back(it->first);
+	}
+
+	for (size_t i = 0; i < toKill.size(); ++i)
+	{
+		int pipeFd = toKill[i];
+		std::map<int, Connection*>::iterator it = _cgiPipeToConn.find(pipeFd);
+		if (it == _cgiPipeToConn.end())
+			continue;
+
+		Connection* conn = it->second;
+		Response* resp = conn->getResponse();
+		const ServerConf* conf = getServerConfForFd(conn->getFd());
+
+		_unregisterCgiPipe(pipeFd);
+
+		if (conf)
+			resp->cgiTimeout(*conf);
+		else
+		{
+			resp->setStatusCode("504");
+			resp->setResponsePhrase("Gateway Timeout");
+		}
+		conn->setState(WRITING);
+		addPollFd(conn->getFd(), EPOLLIN | EPOLLOUT);
 	}
 }
 
@@ -427,6 +523,8 @@ void ServerManager::_closeAllFds()
 {
 	_processingQueue.clear();
 	_processingSet.clear();
+	_cgiPipeToConn.clear();
+	_cgiStartTimes.clear();
 
 	for(std::map<int, Connection*>::iterator it = _connections.begin();
 		it != _connections.end(); ++it)
