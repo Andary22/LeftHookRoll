@@ -35,6 +35,7 @@ enum BuildPhase
 {
 	BUILD_IDLE,
 	BUILD_POST_WRITING,
+	BUILD_CGI_RUNNING,
 	BUILD_DONE
 };
 
@@ -72,6 +73,33 @@ public:
 	const std::string&	getVersion() const;
 	const std::string&	getResponsePhrase() const;
 	ResponseState		getResponseState() const;
+	BuildPhase			getBuildPhase() const;
+	CGIManager*			getCgiInstance() const;
+
+	/**
+	 * @brief Returns the CGI output pipe fd for epoll registration.
+	 * @return The fd, or -1 if no CGI is active.
+	 */
+	int					getCgiOutputFd() const;
+
+	/**
+	 * @brief Called by ServerManager when the CGI pipe is readable.
+	 * Reads available data into _responseDataStore.
+	 * @return true if CGI output is fully consumed (EOF reached), false if more data expected.
+	 */
+	bool				readCgiOutput();
+
+	/**
+	 * @brief Called by ServerManager when the CGI process times out.
+	 * Kills the process and builds a 504 error page.
+	 */
+	void				cgiTimeout(const ServerConf& config);
+
+	/**
+	 * @brief Finalizes the CGI response after all output has been read.
+	 * Parses CGI output headers, builds the HTTP response, transitions to sendable state.
+	 */
+	void				finalizeCgiResponse();
 
 	void				setStatusCode(const std::string& code);
 	void				setResponsePhrase(const std::string& phrase);
@@ -115,14 +143,20 @@ private:
 	bool _handlePost(Request& req, const LocationConf& loc, const ServerConf& config);
 	bool _continuePostWrite(Request& req);
 	void _handleDelete(const Request& req, const LocationConf& loc, const ServerConf& config);
+	bool _handleCGI(Request& req, const LocationConf& loc, const ServerConf& config);
 
 	void _finalizeSuccess(const std::string& contentType);
 	void _serveFile(const std::string& path, const ServerConf& config);
+
+	std::string _drainDataStore();
+	void _splitCgiOutput(const std::string& raw, std::string& headers, std::string& body);
+	std::string _parseCgiHeaders(const std::string& headerBlock);
 
 	bool _sendHeader(int fd);
 	bool _sendBodyStatic(int fd);
 	bool _sendBodyFile(int fd);
 	bool _sendBodyDataStore(int fd);
+	bool _sendBodyChunked(int fd);
 
 	//  Serialized header line (Status-Line + Headers + blank line) cached after build
 	std::string _headerBuffer;

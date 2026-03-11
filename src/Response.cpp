@@ -14,6 +14,8 @@
 #include <cctype>
 #include <algorithm>
 #include <cstdio>
+#include <csignal>
+#include <sys/wait.h>
 
 
 static const size_t RESPONSE_SEND_CHUNK = 16384;
@@ -152,6 +154,17 @@ bool isPathSafe(const std::string& root, const std::string& resolved)
 	return resolved.substr(0, root.size()) == root;
 }
 
+std::string getFileExtension(const std::string& path)
+{
+	size_t dotPos = path.rfind('.');
+	if (dotPos == std::string::npos)
+		return "";
+	size_t slashPos = path.rfind('/');
+	if (slashPos != std::string::npos && slashPos > dotPos)
+		return "";
+	return path.substr(dotPos);
+}
+
 std::string extractFilenameFromUrl(const std::string& url)
 {
 	size_t pos = url.rfind('/');
@@ -260,6 +273,10 @@ bool Response::buildResponse(Request& req, const ServerConf& config)
 	if (_buildPhase == BUILD_POST_WRITING)
 		return _continuePostWrite(req);
 
+	// CGI still running — check if done
+	if (_buildPhase == BUILD_CGI_RUNNING)
+		return false;
+
 	_cachedConfig = &config;
 
 	if (req.getStatusCode() != "200")
@@ -294,6 +311,11 @@ bool Response::buildResponse(Request& req, const ServerConf& config)
 		_responseState = SENDING_RES_HEAD;
 		return true;
 	}
+
+	// CGI detection: check if the URL's file extension has a mapped interpreter
+	std::string ext = getFileExtension(req.getURL());
+	if (!ext.empty() && loc->isCgiExtension(ext))
+		return _handleCGI(req, *loc, config);
 
 	if (req.getMethod() == GET)
 	{
@@ -362,7 +384,6 @@ bool Response::sendSlice(int fd)
 		return _sendHeader(fd);
 	if (_responseState == SENDING_BODY_STATIC)
 		return _sendBodyStatic(fd);
-	//integrate CGI here
 	return false;
 }
 
@@ -643,6 +664,50 @@ bool Response::_continuePostWrite(Request& req)
 	return true;
 }
 
+bool Response::_handleCGI(Request& req, const LocationConf& loc, const ServerConf& config)
+{
+	const std::string& root = loc.getRoot();
+	const std::string  url  = req.getURL();
+
+	std::string scriptPath = root + url;
+
+	if (!isPathSafe(root, scriptPath))
+	{
+		buildErrorPage("400", config);
+		return true;
+	}
+
+	struct stat st;
+	if (stat(scriptPath.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+	{
+		buildErrorPage("404", config);
+		return true;
+	}
+
+	// !this is very important!
+	// our whole dumb implementation depends on the data store being forced into
+	// file format to simplify input redirection for CGI.
+	DataStore& body = req.getBodyStore();
+	if (body.getSize() > 0 && body.getMode() == RAM)
+		body.switchToFileMode();
+
+	if (body.getMode() == FILE_MODE)
+		body.resetReadPosition();
+
+	std::string ext = getFileExtension(url);
+	_cgiInstance = new CGIManager();
+	_cgiInstance->prepare(req, scriptPath, loc.getCgiInterpreter(ext));
+
+	int inputFd = -1;
+	if (body.getSize() > 0 && body.getMode() == FILE_MODE)
+		inputFd = body.getFd();
+
+	_cgiInstance->execute(inputFd);
+	_buildPhase = BUILD_CGI_RUNNING;
+	_cachedConfig = &config;
+	return false;
+}
+
 void Response::_handleDelete(const Request& req, const LocationConf& loc, const ServerConf& config)
 {
 	const std::string& root = loc.getRoot();
@@ -736,6 +801,176 @@ const std::string& Response::getStatusCode() const	  { return _statusCode; }
 const std::string& Response::getVersion() const		 { return _version; }
 const std::string& Response::getResponsePhrase() const  { return _response_phrase; }
 ResponseState	  Response::getResponseState() const   { return _responseState; }
+BuildPhase		  Response::getBuildPhase() const	   { return _buildPhase; }
+CGIManager*		  Response::getCgiInstance() const	   { return _cgiInstance; }
+
+int Response::getCgiOutputFd() const
+{
+	if (_cgiInstance)
+		return _cgiInstance->getOutputFd();
+	return -1;
+}
+
+bool Response::readCgiOutput()
+{
+	if (!_cgiInstance)
+		return true;
+
+	int pipeFd = _cgiInstance->getOutputFd();
+	if (pipeFd < 0)
+		return true;
+
+	char buf[RESPONSE_SEND_CHUNK];
+	ssize_t n = ::read(pipeFd, buf, sizeof(buf));
+
+	if (n > 0)
+	{
+		_responseDataStore.append(buf, static_cast<size_t>(n));
+		if (_cgiInstance->isDone())
+			return true;
+		return false;
+	}
+
+	if (n == 0)//EOF
+	{
+		_cgiInstance->isDone();
+		return true;
+	}
+
+	if (errno == EINTR)
+		return false;
+	//if it's a real error need to kill.
+	_cgiInstance->isDone();
+	return true;
+}
+
+void Response::cgiTimeout(const ServerConf& config)
+{
+	if (_cgiInstance)
+	{
+		pid_t pid = _cgiInstance->getPid();
+		if (pid > 0)
+		{
+			kill(pid, SIGKILL);
+			int status;
+			waitpid(pid, &status, 0);
+			// isDone() will reap the CGI process and close the pipe
+			_cgiInstance->isDone();
+		}
+		delete _cgiInstance;
+		_cgiInstance = NULL;
+	}
+	_buildPhase = BUILD_DONE;
+	buildErrorPage("504", config);
+}
+
+void Response::finalizeCgiResponse()
+{
+	_buildPhase = BUILD_DONE;
+
+	std::string cgiOutput = _drainDataStore();
+
+	std::string cgiHeaders;
+	std::string cgiBody;
+	_splitCgiOutput(cgiOutput, cgiHeaders, cgiBody);
+
+	std::string contentType = _parseCgiHeaders(cgiHeaders);
+
+	_responseDataStore.clear();
+	if (!cgiBody.empty())
+		_responseDataStore.append(cgiBody);
+
+	_finalizeSuccess(contentType);
+
+	delete _cgiInstance;
+	_cgiInstance = NULL;
+}
+
+std::string Response::_drainDataStore()
+{
+	_responseDataStore.resetReadPosition();
+
+	std::string result;
+	char buf[RESPONSE_SEND_CHUNK];
+	size_t n;
+	while ((n = _responseDataStore.read(buf, sizeof(buf))) > 0)
+		result.append(buf, n);
+	return result;
+}
+
+void Response::_splitCgiOutput(const std::string& raw, std::string& headers, std::string& body)
+{
+	size_t headerEnd = raw.find("\r\n\r\n");
+	if (headerEnd != std::string::npos)
+	{
+		headers = raw.substr(0, headerEnd);
+		body = raw.substr(headerEnd + 4);
+		return;
+	}
+
+	headerEnd = raw.find("\n\n");
+	if (headerEnd != std::string::npos)
+	{
+		headers = raw.substr(0, headerEnd);
+		body = raw.substr(headerEnd + 2);
+		return;
+	}
+
+	body = raw;
+}
+
+std::string Response::_parseCgiHeaders(const std::string& headerBlock)
+{
+	std::string contentType = "text/html";
+	_statusCode = "200";
+	_response_phrase = "OK";
+
+	if (headerBlock.empty())
+		return contentType;
+
+	std::istringstream iss(headerBlock);
+	std::string line;
+	while (std::getline(iss, line))
+	{
+		if (!line.empty() && line[line.size() - 1] == '\r')
+			line.erase(line.size() - 1);
+
+		size_t colonPos = line.find(':');
+		if (colonPos == std::string::npos)
+			continue;
+
+		std::string key = line.substr(0, colonPos);
+		std::string value = line.substr(colonPos + 1);
+
+		size_t start = value.find_first_not_of(" \t");
+		if (start != std::string::npos)
+			value = value.substr(start);
+
+		std::string lowerKey = key;
+		for (size_t i = 0; i < lowerKey.size(); ++i)
+			lowerKey[i] = static_cast<char>(tolower(static_cast<unsigned char>(lowerKey[i])));
+
+		if (lowerKey == "content-type")
+			contentType = value;
+		else if (lowerKey == "status")
+		{
+			size_t spacePos = value.find(' ');
+			if (spacePos != std::string::npos)
+			{
+				_statusCode = value.substr(0, spacePos);
+				_response_phrase = value.substr(spacePos + 1);
+			}
+			else
+			{
+				_statusCode = value;
+				_response_phrase = _lookupReasonPhrase(_statusCode);
+			}
+		}
+		else if (lowerKey == "location")
+			addHeader("Location", value);
+	}
+	return contentType;
+}
 
 void Response::setStatusCode(const std::string& code)
 {
