@@ -80,6 +80,7 @@ private:
 	void _parseIndex(LocationConf& loc);
 	void _parseUploadStore(LocationConf& loc);
 	void _parseReturn(LocationConf& loc);
+	void _parseCgiInterpreter(LocationConf& loc);
 
 	// Validators / converters
 
