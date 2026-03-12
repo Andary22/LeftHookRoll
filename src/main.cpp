@@ -12,6 +12,7 @@
 #include "../includes/ConfigParser.hpp"
 
 //do we need a custom DNS inside the conf?
+//cookies and session مانيجمينت? 🍪🍪🍪🍪:
 //turn in checklist:
 //rename executable to webserv
 // write README
