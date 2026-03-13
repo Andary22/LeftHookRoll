@@ -10,11 +10,12 @@ LocationConf::LocationConf(const LocationConf& other)
 	  _returnCode(other._returnCode),
 	  _autoIndex(other._autoIndex),
 	  _defaultPage(other._defaultPage),
-	  _storageLocation(other._storageLocation)
+	  _storageLocation(other._storageLocation),
+	  _cgiInterpreters(other._cgiInterpreters)
 {}
 
 LocationConf& LocationConf::operator=(const LocationConf& other)
-{//
+{
 	if (this != &other)
 	{
 		_path            = other._path;
@@ -25,6 +26,7 @@ LocationConf& LocationConf::operator=(const LocationConf& other)
 		_autoIndex       = other._autoIndex;
 		_defaultPage     = other._defaultPage;
 		_storageLocation = other._storageLocation;
+		_cgiInterpreters = other._cgiInterpreters;
 	}
 	return *this;
 }
@@ -102,4 +104,22 @@ void LocationConf::addAllowedMethod(HTTPMethod method)
 bool LocationConf::isMethodAllowed(HTTPMethod method) const
 {
 	return _allowedMethods.isAllowed(method);
+}
+
+std::string LocationConf::getCgiInterpreter(const std::string& ext) const
+{
+	std::map<std::string, std::string>::const_iterator it = _cgiInterpreters.find(ext);
+	if (it != _cgiInterpreters.end())
+		return it->second;
+	return "";
+}
+
+void LocationConf::addCgiInterpreter(const std::string& ext, const std::string& interpreterPath)
+{
+	_cgiInterpreters[ext] = interpreterPath;
+}
+
+bool LocationConf::isCgiExtension(const std::string& ext) const
+{
+	return _cgiInterpreters.find(ext) != _cgiInterpreters.end();
 }

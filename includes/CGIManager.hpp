@@ -10,7 +10,6 @@
 #include <set>
 #include <unistd.h>
 #include <sys/types.h>
-
 class Request;
 class CGIManager
 {
@@ -33,8 +32,9 @@ class CGIManager
 		 * @brief Prepares the environment and arguments for executing a CGI script.
 		 * @param request the parsed HTTP request.
 		 * @param scriptPath the absolute path to the script to be executed.
+		 * @param interpreterOverride if non-empty, use this interpreter instead of auto-detecting from extension.
 		 */
-		void prepare(const Request& request, const std::string& scriptPath);
+		void prepare(const Request& request, const std::string& scriptPath, const std::string& interpreterOverride = "");
 
 		/**
 		 * @brief Forks, redirs input file and outpipe, and executes the CGI script.
@@ -75,7 +75,7 @@ class CGIManager
 		void	_prepExecveArrays();
 		void	_freeExecveArrays();
 		void	_closePipes();
-	
+
 	static std::set<pid_t> _activePids;
 	static void _registerPid(pid_t pid);
 	static void _unregisterPid(pid_t pid);

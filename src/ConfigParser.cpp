@@ -66,9 +66,9 @@ void ConfigParser::_tokenize(const std::string& content)
 		const char c = content[i];
 
 		if (std::isspace(c))
-        {
-            i++; continue;
-        }
+	  {
+		i++; continue;
+	  }
 
 		if (c == '#')
 		{
@@ -133,14 +133,14 @@ ServerConf ConfigParser::_parseServerBlock()
 	{
 		const std::string directive = _consume();
 
-		if      (directive == "listen")
-            _parseListen(conf);
+		if	(directive == "listen")
+		_parseListen(conf);
 		else if (directive == "server_name")
-            _parseServerName(conf);
+		_parseServerName(conf);
 		else if (directive == "client_max_body_size")
-            _parseMaxBodySize(conf);
+		_parseMaxBodySize(conf);
 		else if (directive == "error_page")
-            _parseErrorPage(conf);
+		_parseErrorPage(conf);
 		else if (directive == "location")
 		{
 			const std::string path = _consume();
@@ -163,18 +163,20 @@ LocationConf ConfigParser::_parseLocationBlock(const std::string& path)
 	{
 		const std::string directive = _consume();
 
-		if      (directive == "root")
-            _parseRoot(loc);
+		if	(directive == "root")
+		_parseRoot(loc);
 		else if (directive == "methods")
-            _parseMethods(loc);
+		_parseMethods(loc);
 		else if (directive == "autoindex")
-            _parseAutoIndex(loc);
+		_parseAutoIndex(loc);
 		else if (directive == "index")
-            _parseIndex(loc);
+		_parseIndex(loc);
 		else if (directive == "upload_store")
-            _parseUploadStore(loc);
+		_parseUploadStore(loc);
 		else if (directive == "return")
-            _parseReturn(loc);
+		_parseReturn(loc);
+		else if (directive == "cgi_interpreter")
+		_parseCgiInterpreter(loc);
 		else
 			throw ConfigException("unknown location directive: '" + directive + "'");
 	}
@@ -274,6 +276,14 @@ void ConfigParser::_parseReturn(LocationConf& loc)
 	loc.setReturnURL(url);
 }
 
+void ConfigParser::_parseCgiInterpreter(LocationConf& loc)
+{
+	const std::string path = _consume();
+	const std::string ext  = _consume();
+	_expect(";");
+	loc.addCgiInterpreter(ext, path);
+}
+
 struct sockaddr_in ConfigParser::_parseSockAddr(const std::string& listenValue)
 {
 	struct sockaddr_in addr;
@@ -308,7 +318,7 @@ struct sockaddr_in ConfigParser::_parseSockAddr(const std::string& listenValue)
 			throw ConfigException("port out of range in listen: '" + listenValue + "'");
 
 		addr.sin_addr.s_addr = htonl(INADDR_ANY);
-		addr.sin_port        = htons(static_cast<uint16_t>(port));
+		addr.sin_port	  = htons(static_cast<uint16_t>(port));
 	}
 	return addr;
 }
@@ -318,7 +328,7 @@ size_t ConfigParser::_parseBodySize(const std::string& value)
 	if (value.empty())
 		throw ConfigException("empty client_max_body_size value");
 	const char   suffix = value[value.size() - 1];
-	size_t       multiplier = 1;
+	size_t	 multiplier = 1;
 	std::string  numStr = value;
 
 	if (suffix == 'k' || suffix == 'K')
@@ -346,10 +356,10 @@ size_t ConfigParser::_parseBodySize(const std::string& value)
 HTTPMethod ConfigParser::_parseMethodToken(const std::string& token)
 {
 	if (token == "GET")
-        return GET;
+	  return GET;
 	if (token == "POST")
-        return POST;
+	  return POST;
 	if (token == "DELETE")
-        return DELETE;
+	  return DELETE;
 	throw ConfigException("unknown HTTP method: '" + token + "'");
 }

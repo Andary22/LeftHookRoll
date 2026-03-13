@@ -8,6 +8,7 @@
 #pragma once
 
 #include <string>
+#include <map>
 #include "AllowedMethods.hpp"
 
 class LocationConf
@@ -29,6 +30,7 @@ class LocationConf
 		bool					getAutoIndex() const;
 		const std::string&		getDefaultPage() const;
 		const std::string&		getStorageLocation() const;
+		std::string				getCgiInterpreter(const std::string& ext) const;
 
 		//  Setters
 
@@ -40,6 +42,7 @@ class LocationConf
 		void setAutoIndex(bool autoIndex);
 		void setDefaultPage(const std::string& defaultPage);
 		void setStorageLocation(const std::string& storageLocation);
+		void addCgiInterpreter(const std::string& ext, const std::string& interpreterPath);
 
 		// Utility
 
@@ -49,6 +52,13 @@ class LocationConf
 		 * @return true if allowed, false otherwise.
 		 */
 		bool isMethodAllowed(HTTPMethod method) const;
+
+		/**
+		 * @brief Checks if a given file extension should be handled by CGI.
+		 * @param ext The extension including the dot (e.g., ".py").
+		 * @return true if this extension is configured as a CGI extension.
+		 */
+		bool isCgiExtension(const std::string& ext) const;
 
 	private:
 		//  Identity
@@ -61,4 +71,5 @@ class LocationConf
 		bool			_autoIndex;			// Directory listing flag
 		std::string		 _defaultPage;		// Default file to serve (e.g., "index.html")
 		std::string		 _storageLocation;	// Directory where uploaded files are saved
+		std::map<std::string, std::string>	_cgiInterpreters;	// Extension -> interpreter path (e.g., ".py" -> "/usr/bin/python3")
 };

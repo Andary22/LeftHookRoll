@@ -100,6 +100,13 @@ ConnectionState Connection::getState() const { return _state; }
 void Connection::setState(ConnectionState state) { _state = state; }
 Response* Connection::getResponse() const { return _response; }
 void Connection::setLocationConf(const LocationConf* conf) { _locationConf = conf; }
+
+int Connection::getCgiPipeFd() const
+{
+	if (_response && _response->getCgiOutputFd() >= 0)
+		return _response->getCgiOutputFd();
+	return -1;
+}
 // --- Private Helpers ---
 void Connection::_updateActivityTimer()
 {
@@ -218,8 +225,16 @@ void Connection::process()
 
 	if (_serverConf)
 	{
-		if (!_response->buildResponse(*_request, *_serverConf)) //if response isn't fully built, stay in RR queue.
-			return;
+		if (!_response->buildResponse(*_request, *_serverConf))
+		{
+			// Check if this is a CGI request that needs pipe monitoring
+			if (_response->getBuildPhase() == BUILD_CGI_RUNNING)
+			{
+				_state = WAITING_FOR_CGI;
+				return;
+			}
+			return; // still in round-robin (e.g. POST writing)
+		}
 	}
 	else
 	{

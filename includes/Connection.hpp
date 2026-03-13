@@ -81,6 +81,11 @@ class Connection
 		Response*		getResponse() const;
 
 		/**
+		 * @brief Returns the CGI output pipe fd, or -1 if no CGI is active.
+		 */
+		int				getCgiPipeFd() const;
+
+		/**
 		 * @brief Assigns the appropriate location block after parsing the request URI.
 		 * @param conf The correctly matched location configuration.
 		 */
