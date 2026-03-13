@@ -142,21 +142,20 @@ void ServerManager::run()
 			int			fd = _eventBuffer[i].data.fd;
 			uint32_t	events = _eventBuffer[i].events;
 
+			if (_cgiPipeToConn.count(fd))
+			{
+				_handleCgiPipeEvent(fd, events);
+				continue;
+			}
 			if (events & (EPOLLHUP | EPOLLERR))
 			{
 				if (!_listenFds.count(fd))
 					_dropConnection(fd);
 				continue;
 			}
-
 			if (_listenFds.count(fd))
 			{
 				_acceptNewConnections(fd);
-				continue;
-			}
-			if (_cgiPipeToConn.count(fd))
-			{
-				_handleCgiPipeEvent(fd, events);
 				continue;
 			}
 			std::map<int, Connection*>::iterator it = _connections.find(fd);
