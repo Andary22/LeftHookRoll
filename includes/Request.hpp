@@ -71,11 +71,17 @@ public:
 	const std::string&							getProtocol() const;
 	const std::string&							getQuery() const;
 	const std::map<std::string, std::string>&	getHeaders() const;
+	const std::map<std::string, std::string>&	getCookies() const;
 	/**
 	 * @brief Gets a specific header value.
 	 * @return The value, or empty string if not found.
 	 */
 	std::string									getHeader(const std::string& key) const;
+	/**
+	 * @brief Gets a specific cookie value.
+	 * @return The value, or empty string if not found.
+	 */
+	std::string									getCookie(const std::string& key) const;
 	/**
 	 * @brief Returns a reference to the DataStore to allow direct writing from recv().
 	 */

@@ -22,6 +22,19 @@ static const size_t RESPONSE_SEND_CHUNK = 16384;
 
 namespace {
 
+bool isSetCookieHeader(const std::string& key)
+{
+	if (key.size() != 10)
+		return false;
+	const char* expected = "set-cookie";
+	for (size_t i = 0; i < key.size(); ++i)
+	{
+		if (static_cast<char>(tolower(static_cast<unsigned char>(key[i]))) != expected[i])
+			return false;
+	}
+	return true;
+}
+
 const LocationConf* matchLocation(const std::string& url, const ServerConf& config)
 {
 	const std::vector<LocationConf>& locations = config.getLocations();
@@ -183,6 +196,7 @@ Response::Response()
 	  _responseDataStore(),
 	  _totalBytesSent(0),
 	  _headers(),
+	  _setCookies(),
 	  _fileFd(-1),
 	  _fileSize(0),
 	  _streamBuf(),
@@ -206,6 +220,7 @@ Response::Response(const Response& other)
 	  _responseDataStore(other._responseDataStore),
 	  _totalBytesSent(other._totalBytesSent),
 	  _headers(other._headers),
+	  _setCookies(other._setCookies),
 	  _fileFd(-1),
 	  _fileSize(other._fileSize),
 	  _streamBuf(other._streamBuf),
@@ -231,6 +246,7 @@ Response& Response::operator=(const Response& other) {
 		_responseDataStore = other._responseDataStore;
 		_totalBytesSent	= other._totalBytesSent;
 		_headers		   = other._headers;
+		_setCookies	   = other._setCookies;
 		if (_fileFd != -1)
 		{
 			close(_fileFd);
@@ -338,6 +354,7 @@ void Response::buildErrorPage(const std::string& code, const ServerConf& config)
 	_responseDataStore.clear();
 	_totalBytesSent = 0;
 	_headers.clear();
+	_setCookies.clear();
 	_headerBuffer.clear();
 	if (_fileFd != -1)
 	{
@@ -502,6 +519,16 @@ void Response::_handleGet(const Request& req, const LocationConf& loc, const Ser
 {
 	const std::string& root = loc.getRoot();
 	const std::string  url  = req.getURL();
+	std::string oldVal = req.getCookie("session_count");
+    int count = oldVal.empty() ? 0 : std::atoi(oldVal.c_str());    
+
+	count++;
+    CookieOptions opts;
+    opts.path = "/";
+    opts.httpOnly = true;
+    std::stringstream ss;
+    ss << count;
+    this->addCookie("session_count", ss.str(), opts);
 
 	std::string resolvedPath = root + url;
 	if (resolvedPath.size() > 1 && resolvedPath[resolvedPath.size() - 1] == '/')
@@ -668,7 +695,16 @@ bool Response::_handleCGI(Request& req, const LocationConf& loc, const ServerCon
 {
 	const std::string& root = loc.getRoot();
 	const std::string  url  = req.getURL();
+	std::string oldVal = req.getCookie("session_count");
+    int count = oldVal.empty() ? 0 : std::atoi(oldVal.c_str());    
 
+	count++;
+    CookieOptions opts;
+    opts.path = "/";
+    opts.httpOnly = true;
+    std::stringstream ss;
+    ss << count;
+    this->addCookie("session_count", ss.str(), opts);
 	std::string scriptPath = root + url;
 
 	if (!isPathSafe(root, scriptPath))
@@ -968,6 +1004,8 @@ std::string Response::_parseCgiHeaders(const std::string& headerBlock)
 		}
 		else if (lowerKey == "location")
 			addHeader("Location", value);
+		else if (lowerKey == "set-cookie")
+			addHeader("Set-Cookie", value);
 	}
 	return contentType;
 }
@@ -985,7 +1023,35 @@ void Response::setResponsePhrase(const std::string& phrase)
 
 void Response::addHeader(const std::string& key, const std::string& value)
 {
+	if (isSetCookieHeader(key))
+	{
+		_setCookies.push_back(value);
+		if (!_headerBuffer.empty())
+			_headerBuffer = _generateHeaderString();
+		return;
+	}
 	_headers[key] = value;
+	if (!_headerBuffer.empty())
+		_headerBuffer = _generateHeaderString();
+}
+
+void Response::addCookie(const std::string& name, const std::string& value, const CookieOptions& options)
+{
+	_setCookies.push_back(_serializeSetCookie(name, value, options));
+	if (!_headerBuffer.empty())
+		_headerBuffer = _generateHeaderString();
+}
+
+void Response::clearCookies()
+{
+	_setCookies.clear();
+	if (!_headerBuffer.empty())
+		_headerBuffer = _generateHeaderString();
+}
+
+const std::vector<std::string>& Response::getSetCookies() const
+{
+	return _setCookies;
 }
 
 
@@ -998,8 +1064,34 @@ std::string Response::_generateHeaderString()
 	{
 		result += it->first + ": " + it->second + "\r\n";
 	}
+	for (std::vector<std::string>::const_iterator it = _setCookies.begin(); it != _setCookies.end(); ++it)
+		result += "Set-Cookie: " + *it + "\r\n";
 	result += "\r\n";
 	return result;
+}
+
+std::string Response::_serializeSetCookie(const std::string& name, const std::string& value, const CookieOptions& options) const
+{
+	std::string cookie = name + "=" + value;
+	if (!options.path.empty())
+		cookie += "; Path=" + options.path;
+	if (!options.domain.empty())
+		cookie += "; Domain=" + options.domain;
+	if (options.hasMaxAge)
+	{
+		std::ostringstream ss;
+		ss << options.maxAge;
+		cookie += "; Max-Age=" + ss.str();
+	}
+	if (!options.expires.empty())
+		cookie += "; Expires=" + options.expires;
+	if (!options.sameSite.empty())
+		cookie += "; SameSite=" + options.sameSite;
+	if (options.secure)
+		cookie += "; Secure";
+	if (options.httpOnly)
+		cookie += "; HttpOnly";
+	return cookie;
 }
 
 std::string Response::_lookupReasonPhrase(const std::string& code) {

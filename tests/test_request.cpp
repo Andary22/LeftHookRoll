@@ -200,11 +200,39 @@ static void testRequestHeaderEdgeCases()
     check("State resolves to REQ_DONE (Length 0)", req.getReqState() == REQ_DONE);
 }
 
+static void testRequestCookies()
+{
+    std::cout << "\n-- Request Cookies --\n";
+
+    {
+        Request req;
+        std::string raw = "GET / HTTP/1.0\r\n"
+                          "Cookie: sid=abc123; theme=dark; lang=en\r\n\r\n";
+        req.parseHeaders(raw);
+
+        check("Cookie sid parsed", req.getCookie("sid") == "abc123");
+        check("Cookie theme parsed", req.getCookie("theme") == "dark");
+        check("Cookie lang parsed", req.getCookie("lang") == "en");
+        check("Cookie map has 3 entries", req.getCookies().size() == 3);
+    }
+
+    {
+        Request req;
+        std::string raw = "GET / HTTP/1.0\r\n"
+                          "Cookie: badtoken; real=ok\r\n\r\n";
+        req.parseHeaders(raw);
+
+        check("Malformed cookie token skipped", req.getCookie("badtoken").empty());
+        check("Valid cookie still parsed", req.getCookie("real") == "ok");
+    }
+}
+
 int main()
 {
     testRequestValid();
     testRequestErrors();
     testRequestHeaderEdgeCases();
+    testRequestCookies();
     testRequestChunkedDone();
     testRequestBodySlice();
 

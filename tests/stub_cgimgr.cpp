@@ -27,7 +27,7 @@ CGIManager::~CGIManager() {}
 pid_t  CGIManager::getPid()      const { return _pId; }
 int    CGIManager::getOutputFd() const { return _outPipe[0]; }
 
-void CGIManager::prepare(const Request&, const std::string&) {}
+void CGIManager::prepare(const Request&, const std::string&, const std::string&) {}
 void CGIManager::execute(int) {}
 bool CGIManager::isDone() { return true; }
 
