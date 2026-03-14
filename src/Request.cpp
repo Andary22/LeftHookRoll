@@ -119,7 +119,7 @@ void Request::_parseRequestLine(const std::string& line)
 	}
 	_URL = line.substr(firstSpace + 1, secondSpace - firstSpace - 1);
 	_protocol = line.substr(secondSpace + 1);
-	if (_protocol != "HTTP/1.0")
+	if (_protocol != "HTTP/1.0" && _protocol != "HTTP/1.1")
 	{
 		_reqState = REQ_ERROR;
 		_statusCode = "505"; // HTTP Version Not Supported
