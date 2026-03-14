@@ -100,6 +100,7 @@ private:
 	DataStore						 	_body;
 	DataStore						 	_decodedBody;
 	std::map<std::string, std::string>	_headers;
+	std::map<std::string, std::string>	_cookies;
 
 	//  State Management
 	ReqState						 _reqState;
@@ -117,6 +118,7 @@ private:
 	//  Private Parsing Helpers
 	void _parseRequestLine(const std::string& line);// parses the  METHOD  URI PROTOCOL line.
 	void _parseHeaderLine(const std::string& line);// parses the key value
+	void _parseCookies(const std::string& cookieHeader);// parses the Cookie header into key-value pairs.
 	void _typeOfReq();// know what type of request is it, chenked or content length
 	void _extractQueryFromURL();
 };

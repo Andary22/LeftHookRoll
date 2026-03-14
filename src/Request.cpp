@@ -176,7 +176,29 @@ size_t Request::parseHeaders(const std::string& rawBuffer)
 	}
 	if (_reqState != REQ_ERROR)
 		_typeOfReq();
+	if (_headers.count("cookie"))
+		_parseCookies(_headers["cookie"]);
 	return headerEnd + 4;
+}
+
+void Request::_parseCookies(const std::string& cookieHeader)
+{
+	size_t pos = 0;
+	while (pos < cookieHeader.size())
+	{
+		size_t eqPos = cookieHeader.find('=', pos);
+		if (eqPos == std::string::npos)
+			break;
+		std::string key = RequestUtils::trim(cookieHeader.substr(pos, eqPos - pos));
+		pos = eqPos + 1;
+		size_t semicolonPos = cookieHeader.find(';', pos);
+		if (semicolonPos == std::string::npos)
+			semicolonPos = cookieHeader.size();
+		std::string value = RequestUtils::trim(cookieHeader.substr(pos, semicolonPos - pos));
+		pos = semicolonPos + 1;
+		if (!key.empty())
+			_cookies[key] = value;
+	}
 }
 
 void Request::_typeOfReq()
