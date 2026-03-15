@@ -17,8 +17,7 @@
         }
 
         // 2. Logic: Read, Increment, and Save
-        let count = parseInt(getCookie("count")) || 0;
-        count++;
+        let count = parseInt(getCookie("session_count")) || 0;
 
         // 3. Save the cookie (expires in 1 day)
         document.cookie = "count=" + count + "; path=/; max-age=" + (60*60*24);

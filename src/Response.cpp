@@ -1021,6 +1021,11 @@ void Response::addHeader(const std::string& key, const std::string& value)
 		_headerBuffer = _generateHeaderString();
 }
 
+/**
+ * if you want accessible by the HTTP server, not by JavaScript.
+ * add this V
+ *  cookie += "; HttpOnly";
+ */
 void Response::addCookie(const Request& req)
 {
 	std::string oldVal = req.getCookie("session_count");
@@ -1031,7 +1036,6 @@ void Response::addCookie(const Request& req)
     ss << count;
 	std::string cookie = "session_count=" + ss.str();
 	cookie += "; Path=/";
-	cookie += "; HttpOnly";
 	_setCookies.push_back(cookie);
 }
 
