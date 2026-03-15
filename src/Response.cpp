@@ -1020,22 +1020,7 @@ void Response::addHeader(const std::string& key, const std::string& value)
 	if (!_headerBuffer.empty())
 		_headerBuffer = _generateHeaderString();
 }
-/*
-	struct CookieOptions
-	{
-		std::string path;
-		std::string domain;
-		std::string expires;
-		std::string sameSite;
-		long		maxAge;
-		bool		hasMaxAge;
-		bool		secure;
-		bool		httpOnly;
 
-		CookieOptions()
-			: path("/"), domain(""), expires(""), sameSite(""), maxAge(0), hasMaxAge(false), secure(false), httpOnly(false) {}
-	};
-*/
 void Response::addCookie(const Request& req)
 {
 	std::string oldVal = req.getCookie("session_count");
