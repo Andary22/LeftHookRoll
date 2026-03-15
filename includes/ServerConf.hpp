@@ -2,7 +2,7 @@
  * @file ServerConf.hpp
  * @brief Stores per-server configuration directives.
  * This class encapsulates the configuration for a specific server block
- * parsed from the webserv.conf file.
+  * parsed from the webserv.conf file.
  */
 #pragma once
 
