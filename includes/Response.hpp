@@ -42,20 +42,6 @@ enum BuildPhase
 
 class Response {
 public:
-	struct CookieOptions
-	{
-		std::string path;
-		std::string domain;
-		std::string expires;
-		std::string sameSite;
-		long		maxAge;
-		bool		hasMaxAge;
-		bool		secure;
-		bool		httpOnly;
-
-		CookieOptions()
-			: path("/"), domain(""), expires(""), sameSite(""), maxAge(0), hasMaxAge(false), secure(false), httpOnly(1) {}
-	};
 
 	Response();
 	Response(const Response& other);
@@ -123,8 +109,7 @@ public:
 	* @brief Adds a header to the response (e.g., "Content-Type", "text/html").
 	*/
 	void addHeader(const std::string& key, const std::string& value);
-	void addCookie(const std::string& name, const std::string& value, const CookieOptions& options = CookieOptions());
-	void clearCookies();
+	void addCookie(const Request& req);
 	const std::vector<std::string>& getSetCookies() const;
 
 private:
@@ -156,7 +141,6 @@ private:
 
 	//  Private Helpers
 	std::string _generateHeaderString();
-	std::string _serializeSetCookie(const std::string& name, const std::string& value, const CookieOptions& options) const;
 	std::string _lookupReasonPhrase(const std::string& code);
 
 	void _handleGet(const Request& req, const LocationConf& loc, const ServerConf& config);

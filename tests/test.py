@@ -29,9 +29,7 @@ print("")  # Critical: Headers/Body separator
 
 # 5. Output Body (Redirect or show info)
 print("<html><head>")
-print("<meta http-equiv='refresh' content='2;url=/session.html'>")
 print("</head><body>")
 print(f"<h1>CGI Session Updated!</h1>")
 print(f"<p>New Count: <b>{count}</b></p>")
-print("<p>Redirecting you back to the dashboard in 2 seconds...</p>")
 print("</body></html>")
