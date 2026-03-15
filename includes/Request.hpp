@@ -71,11 +71,17 @@ public:
 	const std::string&							getProtocol() const;
 	const std::string&							getQuery() const;
 	const std::map<std::string, std::string>&	getHeaders() const;
+	const std::map<std::string, std::string>&	getCookies() const;
 	/**
 	 * @brief Gets a specific header value.
 	 * @return The value, or empty string if not found.
 	 */
 	std::string									getHeader(const std::string& key) const;
+	/**
+	 * @brief Gets a specific cookie value.
+	 * @return The value, or empty string if not found.
+	 */
+	std::string									getCookie(const std::string& key) const;
 	/**
 	 * @brief Returns a reference to the DataStore to allow direct writing from recv().
 	 */
@@ -100,6 +106,7 @@ private:
 	DataStore						 	_body;
 	DataStore						 	_decodedBody;
 	std::map<std::string, std::string>	_headers;
+	std::map<std::string, std::string>	_cookies;
 
 	//  State Management
 	ReqState						 _reqState;
@@ -117,6 +124,7 @@ private:
 	//  Private Parsing Helpers
 	void _parseRequestLine(const std::string& line);// parses the  METHOD  URI PROTOCOL line.
 	void _parseHeaderLine(const std::string& line);// parses the key value
+	void _parseCookies(const std::string& cookieHeader);// parses the Cookie header into key-value pairs.
 	void _typeOfReq();// know what type of request is it, chenked or content length
 	void _extractQueryFromURL();
 };

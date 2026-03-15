@@ -8,12 +8,13 @@
 
 #include <string>
 #include <sys/types.h>
+#include <map>
+#include <vector>
+
 #include "DataStore.hpp"
 #include "ServerConf.hpp"
 #include "Request.hpp"
 #include "CGIManager.hpp"
-#include <map>
-
 
 /**
  * @enum ResponseState
@@ -41,6 +42,7 @@ enum BuildPhase
 
 class Response {
 public:
+
 	Response();
 	Response(const Response& other);
 	Response& operator=(const Response& other);
@@ -67,7 +69,6 @@ public:
 	 * @return true if the entire response is finished, false if more data remains.
 	 */
 	bool sendSlice(int fd);
-
 
 	const std::string&	getStatusCode() const;
 	const std::string&	getVersion() const;
@@ -108,6 +109,8 @@ public:
 	* @brief Adds a header to the response (e.g., "Content-Type", "text/html").
 	*/
 	void addHeader(const std::string& key, const std::string& value);
+	void addCookie(const Request& req);
+	const std::vector<std::string>& getSetCookies() const;
 
 private:
 	std::string			 _statusCode;	  // e.g., "200"
@@ -118,6 +121,7 @@ private:
 	DataStore							_responseDataStore;
 	size_t								_totalBytesSent;
 	std::map<std::string, std::string>	_headers;
+	std::vector<std::string>				_setCookies;
 	int									_fileFd;		  // Open FD for the file being streamed; -1 when not in use
 	size_t								_fileSize;		// Total byte count from stat(); used for Content-Length and end detection
 	std::vector<char>					_streamBuf;	   // Holds the latest chunk read from _fileFd, retained across EAGAIN

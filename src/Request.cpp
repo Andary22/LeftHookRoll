@@ -30,7 +30,7 @@ Request::Request(): _methodName(UNKNOWN_METHOD), _contentLength(-1), _reqState(R
 Request::Request(long long maxBodySize): _methodName(UNKNOWN_METHOD), _contentLength(-1), _reqState(REQ_HEADERS), _statusCode("200"), _maxBodySize(static_cast<size_t>(maxBodySize)), _totalBytesRead(0), _chunkSize(0), _chunkDecodeOffset(0), _isBodyProcessed(false), _ramParsePos(0)
 {}
 
-Request::Request(const Request& other): _methodName(other._methodName), _URL(other._URL), _protocol(other._protocol), _query(other._query), _contentLength(other._contentLength), _body(other._body), _decodedBody(other._decodedBody), _headers(other._headers), _reqState(other._reqState), _statusCode(other._statusCode), _maxBodySize(other._maxBodySize), _totalBytesRead(other._totalBytesRead), _chunkSize(other._chunkSize), _chunkDecodeOffset(other._chunkDecodeOffset), _isBodyProcessed(other._isBodyProcessed), _chunkBuffer(other._chunkBuffer), _ramParsePos(other._ramParsePos)
+Request::Request(const Request& other): _methodName(other._methodName), _URL(other._URL), _protocol(other._protocol), _query(other._query), _contentLength(other._contentLength), _body(other._body), _decodedBody(other._decodedBody), _headers(other._headers), _cookies(other._cookies), _reqState(other._reqState), _statusCode(other._statusCode), _maxBodySize(other._maxBodySize), _totalBytesRead(other._totalBytesRead), _chunkSize(other._chunkSize), _chunkDecodeOffset(other._chunkDecodeOffset), _isBodyProcessed(other._isBodyProcessed), _chunkBuffer(other._chunkBuffer), _ramParsePos(other._ramParsePos)
 {
 }
 
@@ -46,6 +46,7 @@ Request& Request::operator=(const Request& other)
 		_body = other._body;
 		_decodedBody = other._decodedBody;
 		_headers = other._headers;
+		_cookies = other._cookies;
 		_reqState = other._reqState;
 		_statusCode = other._statusCode;
 		_maxBodySize = other._maxBodySize;
@@ -81,6 +82,10 @@ const std::string& Request::getQuery() const {
 
 const std::map<std::string, std::string>& Request::getHeaders() const {
 	return _headers;
+}
+
+const std::map<std::string, std::string>& Request::getCookies() const {
+	return _cookies;
 }
 
 //  Core Parsing Behavior
@@ -150,6 +155,7 @@ size_t Request::parseHeaders(const std::string& rawBuffer)
 	size_t headerEnd = rawBuffer.find("\r\n\r\n");
 	if (headerEnd == std::string::npos)
 		return 0;
+	_cookies.clear();
 
 	std::string headerSection = rawBuffer.substr(0, headerEnd);
 	size_t lineStart = 0;
@@ -176,7 +182,31 @@ size_t Request::parseHeaders(const std::string& rawBuffer)
 	}
 	if (_reqState != REQ_ERROR)
 		_typeOfReq();
+	if (_headers.count("cookie"))
+		_parseCookies(_headers["cookie"]);
 	return headerEnd + 4;
+}
+
+void Request::_parseCookies(const std::string& cookieHeader)
+{
+	size_t pos = 0;
+	while (pos < cookieHeader.size())
+	{
+		size_t semicolonPos = cookieHeader.find(';', pos);
+		if (semicolonPos == std::string::npos)
+			semicolonPos = cookieHeader.size();
+
+		std::string token = RequestUtils::trim(cookieHeader.substr(pos, semicolonPos - pos));
+		size_t eqPos = token.find('=');
+		if (eqPos != std::string::npos)
+		{
+			std::string key = RequestUtils::trim(token.substr(0, eqPos));
+			std::string value = RequestUtils::trim(token.substr(eqPos + 1));
+			if (!key.empty())
+				_cookies[key] = value;
+		}
+		pos = semicolonPos + 1;
+	}
 }
 
 void Request::_typeOfReq()
@@ -229,6 +259,14 @@ std::string Request::getHeader(const std::string& key) const
 	if (_headers.count(keyCopy))
 		return _headers.find(keyCopy)->second;
 	return "";
+}
+
+std::string Request::getCookie(const std::string& key) const
+{
+	std::map<std::string, std::string>::const_iterator it = _cookies.find(key);
+	if (it == _cookies.end())
+		return "";
+	return it->second;
 }
 
 void Request::_parseHeaderLine(const std::string& line)

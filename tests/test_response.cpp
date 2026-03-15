@@ -150,6 +150,18 @@ static size_t toSizeT(const std::string& s) {
     return n;
 }
 
+static size_t countOccurrences(const std::string& haystack, const std::string& needle) {
+    if (needle.empty())
+        return 0;
+    size_t count = 0;
+    size_t pos = 0;
+    while ((pos = haystack.find(needle, pos)) != std::string::npos) {
+        ++count;
+        pos += needle.size();
+    }
+    return count;
+}
+
 static Request makeRequest(const std::string& rawHTTP) {
     Request r;
     r.parseHeaders(rawHTTP);
@@ -574,6 +586,54 @@ static void testWireFormat() {
           wire.size() == heads.size() + 4 + bodyLen);
 }
 
+    static void testSetCookieHeaders() {
+        std::cout << "\n-- Set-Cookie headers --\n";
+
+        {
+          ServerConf conf = makeConf(TEST_ROOT, GET);
+          Response r;
+          r.buildErrorPage("404", conf);
+
+          Response::CookieOptions sidOpt;
+          sidOpt.path = "/";
+          sidOpt.httpOnly = true;
+          sidOpt.sameSite = "Lax";
+          r.addCookie("sid", "abc123", sidOpt);
+
+          Response::CookieOptions themeOpt;
+          themeOpt.path = "/";
+          r.addCookie("theme", "dark", themeOpt);
+
+          std::string wire = drainResponse(r);
+          std::string heads = headerOf(wire);
+
+          check("two Set-Cookie header lines are emitted",
+              countOccurrences(heads, "Set-Cookie: ") == 2);
+          check("sid cookie contains HttpOnly and SameSite",
+              heads.find("Set-Cookie: sid=abc123; Path=/; SameSite=Lax; HttpOnly") != std::string::npos);
+          check("theme cookie line is present",
+              heads.find("Set-Cookie: theme=dark; Path=/") != std::string::npos);
+        }
+
+        {
+          ServerConf conf = makeConf(TEST_ROOT, GET);
+          Response r;
+          r.buildErrorPage("404", conf);
+
+          Response::CookieOptions deleteOpt;
+          deleteOpt.path = "/";
+          deleteOpt.hasMaxAge = true;
+          deleteOpt.maxAge = 0;
+          r.addCookie("sid", "", deleteOpt);
+
+          std::string wire = drainResponse(r);
+          std::string heads = headerOf(wire);
+
+          check("delete cookie uses Max-Age=0",
+              heads.find("Set-Cookie: sid=; Path=/; Max-Age=0") != std::string::npos);
+        }
+    }
+
 int main() {
     setupFixtures();
 
@@ -585,6 +645,7 @@ int main() {
     testPostUpload();
     testDelete();
     testWireFormat();
+    testSetCookieHeaders();
 
     cleanFixtures();
 
