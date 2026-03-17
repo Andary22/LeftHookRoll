@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cookie Counter</title>
+</head>
+<body>
+    <h1>HTML Cookie Counter</h1>
+    <p>New Count: <b id="display">0</b></p>
+
+    <script>
+        // 1. Function to get a specific cookie by name
+        function getCookie(name) {
+            let value = "; " + document.cookie;
+            let parts = value.split("; " + name + "=");
+            if (parts.length === 2) return parts.pop().split(";").shift();
+            return null;
+        }
+
+        // 2. Logic: Read, Increment, and Save
+        let count = parseInt(getCookie("session_count")) || 0;
+
+        // 3. Save the cookie (expires in 1 day)
+        document.cookie = "count=" + count + "; path=/; max-age=" + (60*60*24);
+
+        // 4. Update the UI
+        document.getElementById("display").innerText = count;
+    </script>
+</body>
+</html>
