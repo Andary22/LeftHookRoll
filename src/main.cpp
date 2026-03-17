@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 		ServerManager manager(parsedConfs);
 		manager.run();
 	}
-	catch (const FatalException& e)
+	catch (const std::exception& e)
 	{
 		std::cerr << "Fatal: " << e.what() << std::endl;
 		return 1;
