@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sstream>
+#include "../includes/FatalExceptions.hpp"
 
 // --- Canonical Form ---
 
@@ -212,38 +213,55 @@ void Connection::process()
 
 	_updateActivityTimer();
 
-	if (_request->getReqState() == REQ_CHUNKED)
+	try
 	{
-		if (!_request->processBodySlice())
-			return; // still decoding chunked encoding.
-	}
-	//if anything went wrong at all;recheck that 200 is indeed the default in yaman's implemenation.
-	if (_request->getStatusCode() != "200")
-	{
-		triggerError(std::atoi(_request->getStatusCode().c_str()));
-		return;
-	}
-
-	if (_serverConf)
-	{
-		if (!_response->buildResponse(*_request, *_serverConf))
+		if (_request->getReqState() == REQ_CHUNKED)
 		{
-			// Check if this is a CGI request that needs pipe monitoring
-			if (_response->getBuildPhase() == BUILD_CGI_RUNNING)
-			{
-				_state = WAITING_FOR_CGI;
-				return;
-			}
-			return; // still in round-robin (e.g. POST writing)
+			if (!_request->processBodySlice())
+				return; // still decoding chunked encoding.
 		}
+		//if anything went wrong at all;recheck that 200 is indeed the default in yaman's implemenation.
+		if (_request->getStatusCode() != "200")
+		{
+			triggerError(std::atoi(_request->getStatusCode().c_str()));
+			return;
+		}
+
+		if (_serverConf)
+		{
+			if (!_response->buildResponse(*_request, *_serverConf))
+			{
+				// Check if this is a CGI request that needs pipe monitoring
+				if (_response->getBuildPhase() == BUILD_CGI_RUNNING)
+				{
+					_state = WAITING_FOR_CGI;
+					return;
+				}
+				return; // still in round-robin (e.g. POST writing)
+			}
+		}
+		else
+		{
+			//noconf fallback
+			triggerError(500);
+			return;
+		}
+		_state = WRITING;
 	}
-	else
+	catch (const ClientException& e)
 	{
-		//noconf fallback
-		triggerError(500);
-		return;
+		std::cerr << "client runtime error on fd " << _acceptFD << ": " << e.what() << std::endl;
+		triggerError(e.getStatusCode());
 	}
-	_state = WRITING;
+	catch (const FatalException&)
+	{
+		throw;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "unexpected runtime error on fd " << _acceptFD << ": " << e.what() << std::endl;
+		triggerError(500);
+	}
 }
 
 void Connection::handleWrite()

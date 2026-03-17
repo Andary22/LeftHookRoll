@@ -12,18 +12,11 @@
 #include "../includes/ConfigParser.hpp"
 
 //turn in checklist:
-//rename executable to webserv
 // write README
-	// update README first line
-// write confs, html pages, and CGI scripts to showcase and test on
 //remove all debugging disallowed functions (nm ts, o alternatively, comment .h and check errors):
 	//: inet_ntoa
-	//: usleep --> waitpid
-//verify we throw on: (-;
-	//parsing errors
-	//syscalls
-	//CGIHandler child process failures
-//catch thrown exceptions )-:
+//make sigpipe for CGI trhows error to client.
+//catch invalid output and formulate a response.
 //test cases (adding those as I think of them, if you have an idea feel free to add it to the list:)
 	//mix n match interpreters (E.g. .py with bash)
 	//script with no execute permissions
@@ -43,7 +36,6 @@ static void signalHandler(int sig)
 
 static void signalPipeHandler(int sig) {
 	g_sigpipe = sig;
-	
 }
 
 int main(int argc, char** argv)
@@ -72,9 +64,14 @@ int main(int argc, char** argv)
 		ServerManager manager(parsedConfs);
 		manager.run();
 	}
-	catch (const std::exception& e)
+	catch (const FatalException& e)
 	{
 		std::cerr << "Fatal: " << e.what() << std::endl;
+		return 1;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Unexpected fatal error: " << e.what() << std::endl;
 		return 1;
 	}
 	return 0;

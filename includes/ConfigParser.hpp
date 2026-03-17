@@ -16,20 +16,17 @@
 #include <string>
 #include <vector>
 #include "ServerConf.hpp"
+#include "FatalExceptions.hpp"
 
 class ConfigParser
 {
 public:
 
-	class ConfigException : public std::exception
+	class ConfigException : public FatalException
 	{
 	public:
 		explicit ConfigException(const std::string& msg);
 		virtual ~ConfigException() throw();
-		virtual const char* what() const throw();
-
-	private:
-		std::string _msg;
 	};
 
 	// Canonical form

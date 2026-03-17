@@ -20,3 +20,25 @@ class FatalException : public std::exception
 	private:
 		std::string _msg;
 };
+
+/**
+ * @brief Exception type for failures scoped to a single client request.
+ *
+ * Throw this from request/response/CGI runtime paths when the server stays
+ * operable and the connection should produce an HTTP error response.
+ */
+class ClientException : public std::exception
+{
+	public:
+		ClientException(int statusCode, const std::string& msg);
+		ClientException(const ClientException& other);
+		ClientException& operator=(const ClientException& other);
+		virtual ~ClientException() throw();
+
+		virtual const char* what() const throw();
+		int getStatusCode() const;
+
+	private:
+		int _statusCode;
+		std::string _msg;
+};
