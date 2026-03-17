@@ -18,12 +18,11 @@
 // write confs, html pages, and CGI scripts to showcase and test on
 //remove all debugging disallowed functions (nm ts, o alternatively, comment .h and check errors):
 	//: inet_ntoa
-	//: inet_aton
 	//: usleep --> waitpid
-// integrate default error pages.
 //verify we throw on: (-;
 	//parsing errors
 	//syscalls
+	//CGIHandler child process failures
 //catch thrown exceptions )-:
 //test cases (adding those as I think of them, if you have an idea feel free to add it to the list:)
 	//mix n match interpreters (E.g. .py with bash)

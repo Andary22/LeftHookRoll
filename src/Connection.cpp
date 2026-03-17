@@ -99,6 +99,7 @@ int Connection::getFd() const { return _acceptFD; }
 ConnectionState Connection::getState() const { return _state; }
 void Connection::setState(ConnectionState state) { _state = state; }
 Response* Connection::getResponse() const { return _response; }
+const ServerConf* Connection::getServerConf() const { return _serverConf; }
 void Connection::setLocationConf(const LocationConf* conf) { _locationConf = conf; }
 
 int Connection::getCgiPipeFd() const
