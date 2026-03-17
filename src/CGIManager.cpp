@@ -32,6 +32,13 @@ namespace CGIUtils
             return "/bin/sh";
         return "";
     }
+
+    void closeInheritedFds()
+    {
+        // 3 to skip the standard fds.(in,out,err)
+        for (int fd = 3; fd < 1024; ++fd)
+            close(fd);
+    }
 }
 
 // Canonical Form
@@ -126,6 +133,8 @@ void CGIManager::execute(int inputFd)
         if (dup2(_outPipe[1], STDOUT_FILENO) == -1)
             throw FatalException("CGI child fatal: dup2(stdout) failed");
         close(_outPipe[1]);
+
+		CGIUtils::closeInheritedFds();
 
         execve(_execveArgv[0], _execveArgv, _execveEnvp);
         throw FatalException("CGI child fatal: execve() failed");

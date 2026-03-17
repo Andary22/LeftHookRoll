@@ -154,7 +154,7 @@ private:
 
 	std::string _drainDataStore();
 	void _splitCgiOutput(const std::string& raw, std::string& headers, std::string& body);
-	std::string _parseCgiHeaders(const std::string& headerBlock);
+	bool _parseCgiHeaders(const std::string& headerBlock, std::string& contentType);
 
 	bool _sendHeader(int fd);
 	bool _sendBodyStatic(int fd);
