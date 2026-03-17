@@ -2,7 +2,7 @@
  * @file ServerManager.hpp
  * @brief Owns the event loop and all listening sockets.
  * Accepts new connections, dispatches I/O events, and routes
- * each accepted fd to the correct ServerConf via getsockname().
+ * each accepted fd to the correct ServerConf via listening-fd mapping.
  */
 
 #pragma once
@@ -97,6 +97,7 @@ private:
 	std::vector<struct epoll_event>		_eventBuffer;
 	std::map<int, uint32_t>				_fdEvents;
 	std::set<int>						_listenFds;
+	std::map<int, const ServerConf*>		_listenFdToServerConf;
 
 	// Private helpers
 	/**

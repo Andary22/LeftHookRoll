@@ -42,7 +42,8 @@ ServerManager::ServerManager(const ServerManager& other)
 	  _epollFd(-1),
 	  _eventBuffer(other._eventBuffer),
 	  _fdEvents(),
-	  _listenFds(other._listenFds)
+	  _listenFds(other._listenFds),
+	  _listenFdToServerConf(other._listenFdToServerConf)
 {
 	_epollFd = epoll_create(1);
 	if (_epollFd < 0)
@@ -61,6 +62,7 @@ ServerManager& ServerManager::operator=(const ServerManager& other)
 		_closeAllFds();
 		_interfacePortPairs = other._interfacePortPairs;
 		_listenFds = other._listenFds;
+		_listenFdToServerConf = other._listenFdToServerConf;
 		_eventBuffer = other._eventBuffer;
 		_epollFd = epoll_create(1);
 		if (_epollFd < 0)
@@ -91,6 +93,7 @@ void ServerManager::addServer(const ServerConf* conf)
 
 	_interfacePortPairs[addr] = conf;
 	_listenFds.insert(fd);
+	_listenFdToServerConf[fd] = conf;
 	addPollFd(fd, EPOLLIN);
 
 	std::cout << "Listening on "
@@ -112,6 +115,7 @@ void ServerManager::addListenPort(int port)
 
 	int fd = _createListeningSocket(addr);
 	_listenFds.insert(fd);
+	_listenFdToServerConf[fd] = NULL;
 	addPollFd(fd, EPOLLIN);
 
 
@@ -296,7 +300,10 @@ void ServerManager::_acceptNewConnections(int listenFd)
 			continue;
 		}
 
-		const ServerConf* conf = getServerConfForFd(clientFd);
+		const ServerConf* conf = NULL;
+		std::map<int, const ServerConf*>::const_iterator confIt = _listenFdToServerConf.find(listenFd);
+		if (confIt != _listenFdToServerConf.end())
+			conf = confIt->second;
 		Connection* conn = new Connection(clientFd, clientAddr, conf);
 		_connections[clientFd] = conn;
 		addPollFd(clientFd, EPOLLIN);
@@ -474,7 +481,7 @@ void ServerManager::_sweepCgiTimeouts()
 
 		Connection* conn = it->second;
 		Response* resp = conn->getResponse();
-		const ServerConf* conf = getServerConfForFd(conn->getFd());
+		const ServerConf* conf = conn->getServerConf();
 
 		_unregisterCgiPipe(pipeFd);
 
@@ -539,6 +546,7 @@ void ServerManager::_closeAllFds()
 	}
 	_fdEvents.clear();
 	_listenFds.clear();
+	_listenFdToServerConf.clear();
 	_eventBuffer.clear();
 	if (_epollFd >= 0)
 		close(_epollFd);

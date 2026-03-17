@@ -79,6 +79,7 @@ class Connection
 		ConnectionState	getState() const;
 		void			setState(ConnectionState state);
 		Response*		getResponse() const;
+		const ServerConf*	getServerConf() const;
 
 		/**
 		 * @brief Returns the CGI output pipe fd, or -1 if no CGI is active.

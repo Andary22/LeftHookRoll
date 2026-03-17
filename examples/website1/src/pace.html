@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="home.html">Project Team 6</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNavAltMarkup"
+          aria-controls="navbarNavAltMarkup"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+          <div class="navbar-nav">
+            <a class="nav-link" href="home.html">Home</a>
+            <a class="nav-link" href="courses.html">Courses</a>
+            <a class="nav-link" href="testimonials.html">Testimonials</a>
+            <a class="nav-link" href="contact.html">Contact</a>
+            <a class="nav-link" href="resources.html">Resources</a>
+            <a class="nav-link" href="about.html">About</a>
+            <a class="nav-link active" href="pace.html">Pace</a>
+            <a class="nav-link" href="signup.html">Signup</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1 class="my-4">Pace calculator</h1>
+      <form onsubmit="return calculatePace()" onreset="resetErrors()">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label for="hours-input" class="form-label"
+              >On average how many hours a week do you study?
+              <span class="text-muted">(2-10)</span></label
+            >
+            <div class="input-group">
+              <input
+                type="number"
+                class="form-control d-block"
+                id="hours-input"
+                placeholder="Study hours/Week"
+              />
+              <div id="hours-error" class="invalid-feedback"></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label for="start-date-input" class="form-label"
+              >When will your journey with us start?</label
+            >
+            <div class="input-group">
+              <input
+                type="date"
+                class="form-control"
+                id="start-date-input"
+                placeholder="Study hours/Week"
+                required
+              />
+              <div id="start-date-error" class="invalid-feedback"></div>
+            </div>
+          </div>
+        </div>
+        <label for="password-conf-input" class="form-label"
+          >What courses do you want to enroll in:</label
+        >
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" value="C" id="C" />
+          <label class="form-check-label" for="C">
+            The C Programming Language
+          </label>
+        </div>
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            value="html"
+            id="html"
+          />
+          <label class="form-check-label" for="html"> HTML 5 </label>
+        </div>
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            value="css"
+            id="css"
+          />
+          <label class="form-check-label" for="css"> CSS 3 </label>
+        </div>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" value="js" id="js" />
+          <label class="form-check-label" for="js"> JavaScript </label>
+        </div>
+        <div id="inroll-error"></div>
+        <button
+          type="submit"
+          value="calculate"
+          class="btn btn-primary w-100 mb-4"
+        >
+          Calculate
+        </button>
+      </form>
+      <textarea id="result" rows="10" class="mt-4 w-100"></textarea>
+    </div>
+    <footer class="footer d-block mt-auto">
+      <p>
+        Made by:
+        <a target="_blank" href="https://github.com/yamanalrfai">yaman</a>,
+        <a target="_blank" href="https://github.com/hamza10755">Hamza</a>,
+        <a target="_blank" href="https://github.com/dotacow">Yousef</a> and
+        <a target="_blank" href="https://github.com/YousefKurchaloy">Yousef</a>.
+      </p>
+      <p>
+        You can check out the source code for this website here
+        <i class="fa fa-arrow-right"></i>
+        <a
+          target="_blank"
+          href="https://github.com/YousefKurchaloy/Intro-to-Web-Development-Project"
+          ><i style="font-size: 20px" class="fa-brands fa-github"></i
+        ></a>
+      </p>
+    </footer>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      const courseDurations = { C: 20, html: 8, css: 8, js: 16 };
+
+      function calculatePace() {
+        let isValid = true;
+
+        const hoursInput = document.getElementById("hours-input");
+        const hoursError = document.getElementById("hours-error");
+        const hoursValue = parseInt(hoursInput.value, 10);
+
+        if (isNaN(hoursValue) || hoursValue < 2 || hoursValue > 10) {
+          hoursError.textContent = "Please enter a value between 2 and 10.";
+          hoursInput.classList.add("is-invalid");
+          isValid = false;
+        } else {
+          hoursError.textContent = "";
+          hoursInput.classList.remove("is-invalid");
+        }
+
+        const startDateInput = document.getElementById("start-date-input");
+        const startDateError = document.getElementById("start-date-error");
+
+        const startDate = new Date(
+          document.getElementById("start-date-input").value
+        );
+        const today = new Date();
+
+        if (!startDateInput.value) {
+          startDateError.textContent = "Please select a start date.";
+          startDateInput.classList.add("is-invalid");
+          isValid = false;
+        } else if (today >= startDate) {
+          startDateError.textContent = "Please select a future date.";
+          startDateInput.classList.add("is-invalid");
+          isValid = false;
+        } else {
+          startDateError.textContent = "";
+          startDateInput.classList.remove("is-invalid");
+        }
+
+        const courseInputs = document.querySelectorAll(".form-check-input");
+        const enrollError = document.getElementById("inroll-error");
+        const isAnyCourseSelected = Array.from(courseInputs).some(
+          (input) => input.checked
+        );
+
+        if (!isAnyCourseSelected) {
+          enrollError.textContent = "Please select at least one course.";
+          enrollError.classList.add("text-danger");
+          isValid = false;
+        } else {
+          enrollError.textContent = "";
+          enrollError.classList.remove("text-danger");
+        }
+
+        if (isValid) {
+          let totalHours = 0;
+          let selectedCourses = [];
+          courseInputs.forEach((input) => {
+            if (input.checked) {
+              totalHours += courseDurations[input.value];
+              selectedCourses.push(input.value);
+            }
+          });
+
+          const weeksNeeded = Math.ceil(totalHours / hoursValue);
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + weeksNeeded * 7);
+
+          const result = document.getElementById("result");
+          result.innerHTML = `Based on your selected courses,
+${selectedCourses.join(", ")}.
+If you study ${hoursValue} hours/week,
+you will need ${weeksNeeded} weeks to complete the selected courses.
+Estimated Completion Date: ${endDate.toDateString()}`;
+
+          return false;
+        } else {
+          return false;
+        }
+      }
+
+      function resetErrors() {
+        const errorElements = document.querySelectorAll(
+          ".invalid-feedback, .text-danger"
+        );
+        errorElements.forEach((error) => (error.textContent = ""));
+
+        const invalidInputs = document.querySelectorAll(".is-invalid");
+        invalidInputs.forEach((input) => input.classList.remove("is-invalid"));
+
+        document.getElementById("result").innerHTML = "";
+      }
+    </script>
+  </body>
+</html>

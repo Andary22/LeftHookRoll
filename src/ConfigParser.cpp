@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include "../includes/ConfigParser.hpp"
 
 // ConfigException
@@ -296,15 +297,30 @@ struct sockaddr_in ConfigParser::_parseSockAddr(const std::string& listenValue)
 		const std::string ipStr   = listenValue.substr(0, colon);
 		const std::string portStr = listenValue.substr(colon + 1);
 
-		if (inet_aton(ipStr.c_str(), &addr.sin_addr) == 0)
-			throw ConfigException("invalid IP address in listen: '" + ipStr + "'");
-
 		if (portStr.empty() || portStr.find_first_not_of("0123456789") != std::string::npos)
 			throw ConfigException("invalid port in listen: '" + portStr + "'");
 
 		const int port = std::atoi(portStr.c_str());
 		if (port <= 0 || port > 65535)
 			throw ConfigException("port out of range in listen: '" + portStr + "'");
+
+		if (ipStr.empty())
+			throw ConfigException("invalid IP address in listen: '" + ipStr + "'");
+
+		struct addrinfo hints;
+		std::memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+
+		struct addrinfo* result = NULL;
+		int rc = getaddrinfo(ipStr.c_str(), NULL, &hints, &result);
+		if (rc != 0 || result == NULL)
+			throw ConfigException("invalid IP/host in listen: '" + ipStr + "'");
+
+		const struct sockaddr_in* resolved =
+			reinterpret_cast<const struct sockaddr_in*>(result->ai_addr);
+		addr.sin_addr = resolved->sin_addr;
+		freeaddrinfo(result);
 
 		addr.sin_port = htons(static_cast<uint16_t>(port));
 	}
