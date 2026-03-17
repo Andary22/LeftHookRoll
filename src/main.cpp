@@ -33,6 +33,7 @@
 	//test huge request body handling with a CGI script that prints the body back out.
 	//eval sheet test cases
 volatile sig_atomic_t g_running = 1;
+volatile sig_atomic_t g_sigpipe = 0;
 
 static void signalHandler(int sig)
 {
@@ -40,9 +41,15 @@ static void signalHandler(int sig)
 	g_running = 0;
 }
 
+static void signalPipeHandler(int sig) {
+	g_sigpipe = sig;
+	
+}
+
 int main(int argc, char** argv)
 {
 	signal(SIGINT, signalHandler);
+	signal(SIGPIPE, signalPipeHandler);
 	if (argc > 2)
 	{
 		std::cerr << "Usage: " << argv[0] << " [configuration file]" << std::endl;
