@@ -3,4 +3,7 @@
 lefthookroll
 .vscode/
 ofiles/
-.log
+*.log
+# Ignore GitHub workflows
+.github/
+AGENTS.md
