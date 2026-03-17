@@ -30,10 +30,21 @@ ServerManager::ServerManager(std::vector<ServerConf> confsCopy) : _epollFd(-1)
 		throw FatalException(std::string("epoll_create(): ") + strerror(errno));
 	_eventBuffer.resize(64);
 
-	for (size_t i = 0; i < confsCopy.size(); ++i)
+	try
 	{
-		_serverConfs.push_back(new ServerConf(confsCopy[i]));
-		addServer(_serverConfs.back());
+		for (size_t i = 0; i < confsCopy.size(); ++i)
+		{
+			_serverConfs.push_back(new ServerConf(confsCopy[i]));
+			addServer(_serverConfs.back());
+		}
+	}
+	catch (...)
+	{
+		for (size_t i = 0; i < _serverConfs.size(); ++i)
+			delete _serverConfs[i];
+		_serverConfs.clear();
+		_closeAllFds();
+		throw;
 	}
 }
 
@@ -48,10 +59,18 @@ ServerManager::ServerManager(const ServerManager& other)
 	_epollFd = epoll_create(1);
 	if (_epollFd < 0)
 		throw FatalException(std::string("epoll_create(): ") + strerror(errno));
-	for (std::map<int, uint32_t>::const_iterator it = other._fdEvents.begin();
-		 it != other._fdEvents.end(); ++it)
+	try
 	{
-		addPollFd(it->first, it->second);
+		for (std::map<int, uint32_t>::const_iterator it = other._fdEvents.begin();
+			 it != other._fdEvents.end(); ++it)
+		{
+			addPollFd(it->first, it->second);
+		}
+	}
+	catch (...)
+	{
+		_closeAllFds();
+		throw;
 	}
 }
 
@@ -175,14 +194,31 @@ void ServerManager::_handleConnection(Connection* conn, uint32_t events)
 {
 	int fd = conn->getFd();
 
-	if (events & EPOLLIN)
+	try
 	{
-		conn->handleRead();
-		if (conn->getState() == PROCESSING)
-			_enqueueProcessing(conn);
+		if (events & EPOLLIN)
+		{
+			conn->handleRead();
+			if (conn->getState() == PROCESSING)
+				_enqueueProcessing(conn);
+		}
+		if ((events & EPOLLOUT) && conn->getState() == WRITING)
+			conn->handleWrite();
 	}
-	if ((events & EPOLLOUT) && conn->getState() == WRITING)
-		conn->handleWrite();
+	catch (const ClientException& e)
+	{
+		std::cerr << "client runtime error on fd " << fd << ": " << e.what() << std::endl;
+		conn->triggerError(e.getStatusCode());
+	}
+	catch (const FatalException&)
+	{
+		throw;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "unexpected runtime error on fd " << fd << ": " << e.what() << std::endl;
+		conn->triggerError(500);
+	}
 
 	//epoll based on final state for next iteration
 	switch (conn->getState())
@@ -378,7 +414,24 @@ void ServerManager::_runRoundRobin()
 		if (_processingSet.find(conn) == _processingSet.end())
 			continue;
 
-		conn->process();
+		try
+		{
+			conn->process();
+		}
+		catch (const ClientException& e)
+		{
+			std::cerr << "client runtime error on fd " << conn->getFd() << ": " << e.what() << std::endl;
+			conn->triggerError(e.getStatusCode());
+		}
+		catch (const FatalException&)
+		{
+			throw;
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << "unexpected runtime error on fd " << conn->getFd() << ": " << e.what() << std::endl;
+			conn->triggerError(500);
+		}
 		++processed;
 
 		if (conn->getState() == PROCESSING)
@@ -443,10 +496,33 @@ void ServerManager::_handleCgiPipeEvent(int pipeFd, uint32_t events)
 	Response* resp = conn->getResponse();
 
 	bool done = false;
-	if (events & (EPOLLHUP | EPOLLERR))
-		done = true;
-	else if (events & EPOLLIN)
-		done = resp->readCgiOutput();
+	try
+	{
+		if (events & (EPOLLHUP | EPOLLERR))
+			done = true;
+		else if (events & EPOLLIN)
+			done = resp->readCgiOutput();
+	}
+	catch (const ClientException& e)
+	{
+		std::cerr << "client CGI runtime error on fd " << conn->getFd() << ": " << e.what() << std::endl;
+		conn->triggerError(e.getStatusCode());
+		_unregisterCgiPipe(pipeFd);
+		addPollFd(conn->getFd(), EPOLLIN | EPOLLOUT);
+		return;
+	}
+	catch (const FatalException&)
+	{
+		throw;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "unexpected CGI runtime error on fd " << conn->getFd() << ": " << e.what() << std::endl;
+		conn->triggerError(500);
+		_unregisterCgiPipe(pipeFd);
+		addPollFd(conn->getFd(), EPOLLIN | EPOLLOUT);
+		return;
+	}
 
 	if (done)
 	{
