@@ -158,7 +158,7 @@ std::string buildDefaultErrorHtml(const std::string& code, const std::string& ph
 	html += code + " " + phrase;
 	html += "</h1>\r\n<p>LeftHookRoll/1.0</p>\r\n</body>\r\n</html>";
 	return html;
-}
+}	
 
 bool isPathSafe(const std::string& root, const std::string& resolved)
 {
@@ -389,7 +389,6 @@ void Response::buildErrorPage(const std::string& code, const ServerConf& config)
 			return;
 		}
 	}
-
 	std::string body = buildDefaultErrorHtml(code, _response_phrase);
 	_responseDataStore.append(body);
 	_finalizeSuccess("text/html");
@@ -688,7 +687,7 @@ bool Response::_handleCGI(Request& req, const LocationConf& loc, const ServerCon
 {
 	const std::string& root = loc.getRoot();
 	const std::string  url  = req.getURL();
-	
+
     this->addCookie(req);
 	std::string scriptPath = root + url;
 
@@ -1029,7 +1028,7 @@ void Response::addHeader(const std::string& key, const std::string& value)
 void Response::addCookie(const Request& req)
 {
 	std::string oldVal = req.getCookie("session_count");
-    int count = oldVal.empty() ? 0 : std::atoi(oldVal.c_str()); 
+    int count = oldVal.empty() ? 0 : std::atoi(oldVal.c_str());
 
 	count++;
     std::stringstream ss;

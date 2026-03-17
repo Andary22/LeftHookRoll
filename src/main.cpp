@@ -20,6 +20,7 @@
 	//: inet_ntoa
 	//: inet_aton
 	//: usleep --> waitpid
+// integrate default error pages.
 //verify we throw on: (-;
 	//parsing errors
 	//syscalls
