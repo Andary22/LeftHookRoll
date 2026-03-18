@@ -14,7 +14,6 @@
 extern volatile sig_atomic_t g_running;
 
 // --- Canonical Form ---
-
 ServerManager::ServerManager() : _epollFd(-1)
 {
 	_epollFd = epoll_create(1);
@@ -116,7 +115,7 @@ void ServerManager::addServer(const ServerConf* conf)
 	addPollFd(fd, EPOLLIN);
 
 	std::cout << "Listening on "
-			  << inet_ntoa(addr.sin_addr) << ":"
+			  << req_utils::ipv4ToString(addr) << ":"
 			  << ntohs(addr.sin_port) << std::endl;
 }
 
@@ -345,7 +344,7 @@ void ServerManager::_acceptNewConnections(int listenFd)
 		addPollFd(clientFd, EPOLLIN);
 
 		std::cout << "New connection from "
-				  << inet_ntoa(clientAddr.sin_addr) << ":"
+				  << req_utils::ipv4ToString(clientAddr) << ":"
 				  << ntohs(clientAddr.sin_port)
 				  << " [fd " << clientFd << "]" << std::endl;
 	}

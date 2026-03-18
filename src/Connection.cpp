@@ -1,5 +1,5 @@
 #include "../includes/Connection.hpp"
-
+#include "../includes/ServerConf.hpp"
 #include <iostream>
 #include <cstring>
 #include <cerrno>
@@ -186,7 +186,7 @@ void Connection::handleRead()
 	if (n <= 0)
 	{
 		if (n < 0)
-			std::cerr << "recv error on client " << inet_ntoa(_IPA.sin_addr) <<
+			std::cerr << "recv error on client " << req_utils::ipv4ToString(_IPA) <<
 					": " << strerror(errno) << std::endl;
 		_state = FINISHED;
 		return;

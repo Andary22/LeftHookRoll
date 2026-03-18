@@ -8,12 +8,17 @@
 #include <string>
 #include <map>
 #include <sys/types.h>
+#include <netinet/in.h>
 #include "AllowedMethods.hpp"
 #include "DataStore.hpp"
 
 //like a time slice per parse iter, but in bytes 🤯😲
 #define PARSE_BYTE_SLICE 8192
-
+namespace req_utils
+{
+	std::string trim(const std::string& s);
+	std::string ipv4ToString(const struct ::sockaddr_in& addr);
+}
 /**
  * @enum ReqState
  * @brief Represents the current network-reading phase of the HTTP request.

@@ -13,9 +13,7 @@
 
 //turn in checklist:
 // write README
-//remove all debugging disallowed functions (nm ts, o alternatively, comment .h and check errors):
-	//: inet_ntoa
-//make sigpipe for CGI trhows error to client.
+//comment .h and check for errors (to avoid forbidden functions)
 //test cases (adding those as I think of them, if you have an idea feel free to add it to the list:)
 	//mix n match interpreters (E.g. .py with bash)
 	//script with no execute permissions

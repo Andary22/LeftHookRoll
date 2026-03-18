@@ -4,10 +4,14 @@
  */
 
 #include "../includes/Request.hpp"
+#include <sstream>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+namespace req_utils
+{//sorry, this is ugly but first time creating a namespace, bear with me ;p
 
-namespace RequestUtils
-{
-	std::string trim(const std::string& s) {
+	std::string trim(const std::string& s)
+	{
 		int start = 0;
 		int end = static_cast<int>(s.size()) - 1;
 		while (start <= end && std::isspace(static_cast<unsigned char>(s[start]))) {
@@ -20,6 +24,17 @@ namespace RequestUtils
 			return "";
 		}
 		return s.substr(start, end - start + 1);
+	}
+
+	std::string ipv4ToString(const struct ::sockaddr_in& addr)
+	{
+		unsigned long hostOrder = ntohl(addr.sin_addr.s_addr);
+		std::ostringstream oss;
+		oss << ((hostOrder >> 24) & 0xFF) << "."
+			<< ((hostOrder >> 16) & 0xFF) << "."
+			<< ((hostOrder >> 8) & 0xFF) << "."
+			<< (hostOrder & 0xFF);
+		return oss.str();
 	}
 }
 // Canonical Form
@@ -196,12 +211,12 @@ void Request::_parseCookies(const std::string& cookieHeader)
 		if (semicolonPos == std::string::npos)
 			semicolonPos = cookieHeader.size();
 
-		std::string token = RequestUtils::trim(cookieHeader.substr(pos, semicolonPos - pos));
+		std::string token = req_utils::trim(cookieHeader.substr(pos, semicolonPos - pos));
 		size_t eqPos = token.find('=');
 		if (eqPos != std::string::npos)
 		{
-			std::string key = RequestUtils::trim(token.substr(0, eqPos));
-			std::string value = RequestUtils::trim(token.substr(eqPos + 1));
+			std::string key = req_utils::trim(token.substr(0, eqPos));
+			std::string value = req_utils::trim(token.substr(eqPos + 1));
 			if (!key.empty())
 				_cookies[key] = value;
 		}
@@ -275,8 +290,8 @@ void Request::_parseHeaderLine(const std::string& line)
 	if (colonPos == std::string::npos)
 		return;
 
-	std::string key = RequestUtils::trim(line.substr(0, colonPos));
-	std::string value = RequestUtils::trim(line.substr(colonPos + 1));
+	std::string key = req_utils::trim(line.substr(0, colonPos));
+	std::string value = req_utils::trim(line.substr(colonPos + 1));
 
 	for (size_t i = 0; i < key.size(); ++i)
 		key[i] = std::tolower(static_cast<unsigned char>(key[i]));
@@ -332,9 +347,9 @@ bool Request::processBodySlice()
 		_body = _decodedBody;
 		_chunkBuffer.clear();
 		_body.resetReadPosition();
-    	std::stringstream ss;
-    	ss << _body.getSize();
-    	std::string str = ss.str();
+		std::stringstream ss;
+		ss << _body.getSize();
+		std::string str = ss.str();
 		_headers["content-length"] = str;
 		return true;
 	}
