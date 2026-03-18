@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <sstream>
 #include <cstring>
 #include <cstdlib>
@@ -30,6 +29,12 @@ static void check(const char* label, bool condition) {
 
 static const std::string TEST_ROOT = "/tmp/webserv_test_root";
 static const std::string UPLOAD_DIR = "/tmp/webserv_test_uploads";
+static const std::string CGI_PY_GOOD = TEST_ROOT + "/good.py";
+static const std::string CGI_PY_BODY_ECHO = TEST_ROOT + "/echo_body.py";
+static const std::string CGI_PY_INVALID = TEST_ROOT + "/invalid.py";
+static const std::string CGI_CGI_NOEXEC = TEST_ROOT + "/noexec.cgi";
+
+static std::string drainResponse(Response& r);
 
 static void mkdir_p(const std::string& path) {
     mkdir(path.c_str(), 0755);
@@ -99,6 +104,38 @@ static ServerConf makeConf(const std::string& root,
     if (!storageDir.empty())  loc.setStorageLocation(storageDir);
     conf.addLocation(loc);
     return conf;
+}
+
+static ServerConf makeCgiConf(const std::string& root,
+                            const std::string& ext,
+                            const std::string& interpreter,
+                            bool allowPost) {
+    ServerConf conf;
+    conf.setServerName("cgi-test");
+    conf.setMaxBodySize(10 * 1024 * 1024);
+
+    LocationConf loc;
+    loc.setPath("/");
+    loc.setRoot(root);
+    loc.addAllowedMethod(GET);
+    if (allowPost)
+        loc.addAllowedMethod(POST);
+    loc.addCgiInterpreter(ext, interpreter);
+    conf.addLocation(loc);
+    return conf;
+}
+
+static std::string executeCgiResponse(Response& r, Request& req, const ServerConf& conf)
+{
+    bool ready = r.buildResponse(req, conf);
+    if (!ready && r.getBuildPhase() == BUILD_CGI_RUNNING)
+    {
+        int guard = 0;
+        while (!r.readCgiOutput() && guard++ < 20000)
+            usleep(1000);
+        r.finalizeCgiResponse();
+    }
+    return drainResponse(r);
 }
 
 static std::string drainResponse(Response& r) {
@@ -177,6 +214,34 @@ static void setupFixtures() {
     writeFile(TEST_ROOT + "/data.json",  "{\"key\":\"value\"}");
     writeFile(TEST_ROOT + "/subdir/page.html", "<p>subpage</p>");
     writeFileBytes(TEST_ROOT + "/large.bin", 64 * 1024, 'A');
+
+    writeFile(CGI_PY_GOOD,
+        "#!/usr/bin/env python3\n"
+        "print('Content-Type: text/plain')\n"
+        "print('')\n"
+        "print('OK_FROM_PY')\n");
+    chmod(CGI_PY_GOOD.c_str(), 0755);
+
+    writeFile(CGI_PY_BODY_ECHO,
+        "#!/usr/bin/env python3\n"
+        "import sys\n"
+        "data = sys.stdin.read()\n"
+        "print('Content-Type: text/plain')\n"
+        "print('')\n"
+        "print(data)\n");
+    chmod(CGI_PY_BODY_ECHO.c_str(), 0755);
+
+    writeFile(CGI_PY_INVALID,
+        "#!/usr/bin/env python3\n"
+        "print('this is not a CGI header block')\n");
+    chmod(CGI_PY_INVALID.c_str(), 0755);
+
+    writeFile(CGI_CGI_NOEXEC,
+        "#!/bin/sh\n"
+        "echo 'Content-Type: text/plain'\n"
+        "echo\n"
+        "echo 'SHOULD_NOT_RUN_WITHOUT_EXEC_BIT'\n");
+    chmod(CGI_CGI_NOEXEC.c_str(), 0644);
 }
 
 static void cleanFixtures() {
@@ -185,6 +250,10 @@ static void cleanFixtures() {
     removeFile(TEST_ROOT + "/data.json");
     removeFile(TEST_ROOT + "/subdir/page.html");
     removeFile(TEST_ROOT + "/large.bin");
+	removeFile(CGI_PY_GOOD);
+	removeFile(CGI_PY_BODY_ECHO);
+	removeFile(CGI_PY_INVALID);
+	removeFile(CGI_CGI_NOEXEC);
     rmdir((TEST_ROOT + "/subdir").c_str());
     rmdir(TEST_ROOT.c_str());
     rmdir(UPLOAD_DIR.c_str());
@@ -618,6 +687,71 @@ static void testSetCookieHeaders() {
 	}
 }
 
+static void testCgiScenarios() {
+    std::cout << "\n-- CGI scenario coverage --\n";
+
+    {
+        ServerConf conf = makeCgiConf(TEST_ROOT, ".py", "/bin/bash", false);
+        Request req = makeRequest("GET /good.py HTTP/1.1\r\nHost: x\r\n\r\n");
+        Response r;
+        executeCgiResponse(r, req, conf);
+        check("mix-n-match interpreter (.py with bash) yields 502", r.getStatusCode() == "502");
+    }
+
+    {
+        ServerConf conf = makeCgiConf(TEST_ROOT, ".cgi", "", false);
+        Request req = makeRequest("GET /noexec.cgi HTTP/1.1\r\nHost: x\r\n\r\n");
+        Response r;
+        executeCgiResponse(r, req, conf);
+        check("script without execute permissions yields 502", r.getStatusCode() == "502");
+    }
+
+    {
+        ServerConf conf = makeCgiConf(TEST_ROOT, ".py", "/usr/bin/python3", false);
+        Request req = makeRequest("GET /does_not_exist.py HTTP/1.1\r\nHost: x\r\n\r\n");
+        Response r;
+        r.buildResponse(req, conf);
+        check("nonexistent CGI script yields 404", r.getStatusCode() == "404");
+    }
+
+    {
+        ServerConf conf = makeCgiConf(TEST_ROOT, ".py", "/tmp/no/such/interpreter", false);
+        Request req = makeRequest("GET /good.py HTTP/1.1\r\nHost: x\r\n\r\n");
+        Response r;
+        executeCgiResponse(r, req, conf);
+        check("nonexistent interpreter yields 502", r.getStatusCode() == "502");
+    }
+
+    {
+        ServerConf conf = makeCgiConf(TEST_ROOT, ".py", "", false);
+        Request req = makeRequest("GET /good.py HTTP/1.1\r\nHost: x\r\n\r\n");
+        Response r;
+        std::string wire = executeCgiResponse(r, req, conf);
+        check("omitted interpreter uses auto-detection", r.getStatusCode() == "200");
+        check("auto-detected CGI body is returned", bodyOf(wire).find("OK_FROM_PY") != std::string::npos);
+    }
+
+    {
+        ServerConf conf = makeCgiConf(TEST_ROOT, ".py", "", true);
+        Request req = makeRequest("POST /echo_body.py HTTP/1.1\r\nHost: x\r\nContent-Length: 131072\r\n\r\n");
+        std::string hugeBody(131072, 'Z');
+        req.getBodyStore().append(hugeBody);
+        Response r;
+        std::string wire = executeCgiResponse(r, req, conf);
+        std::string body = bodyOf(wire);
+        check("huge request body CGI echo returns 200", r.getStatusCode() == "200");
+        check("huge request body is echoed back", body.find(std::string(1024, 'Z')) != std::string::npos);
+    }
+
+    {
+        ServerConf conf = makeCgiConf(TEST_ROOT, ".py", "/usr/bin/python3", false);
+        Request req = makeRequest("GET /invalid.py HTTP/1.1\r\nHost: x\r\n\r\n");
+        Response r;
+        executeCgiResponse(r, req, conf);
+        check("invalid CGI output format yields 502", r.getStatusCode() == "502");
+    }
+}
+
 int main() {
     setupFixtures();
 
@@ -630,6 +764,7 @@ int main() {
     testDelete();
     testWireFormat();
     testSetCookieHeaders();
+	testCgiScenarios();
 
     cleanFixtures();
 

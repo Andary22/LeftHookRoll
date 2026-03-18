@@ -205,6 +205,12 @@ static void testConfigParserErrors()
 		try { p.parse(); check("throws on missing file", false); }
 		catch (const ConfigParser::ConfigException&) { check("throws on missing file", true); }
 	}
+
+	{
+		ConfigParser p("tests/fatal_unit_testing.conf");
+		try { p.parse(); check("throws on fatal invalid config fixture", false); }
+		catch (const ConfigParser::ConfigException&) { check("throws on fatal invalid config fixture", true); }
+	}
 }
 
 // ============================================================================
