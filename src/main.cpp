@@ -14,14 +14,7 @@
 //turn in checklist:
 // write README
 //comment .h and check for errors (to avoid forbidden functions)
-//test cases (adding those as I think of them, if you have an idea feel free to add it to the list:)
-	//mix n match interpreters (E.g. .py with bash)
-	//script with no execute permissions
-	//nonexistent script
-	//nonexistent interpreter
-	//omit interpreter to test auto-detection.
-	//test huge request body handling with a CGI script that prints the body back out.
-	//eval sheet test cases
+//eval sheet test cases
 volatile sig_atomic_t g_running = 1;
 volatile sig_atomic_t g_sigpipe = 0;
 
