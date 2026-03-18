@@ -35,7 +35,7 @@ static void testRequestValid()
         std::string raw = "GET /index.html?user=123&sort=asc HTTP/1.0\r\n"
                           "Host: localhost\r\n"
                           "Accept: text/html\r\n\r\n";
-        
+
         req.parseHeaders(raw);
 
         check("Method parsed to GET",       req.getMethod() == GET);
@@ -52,7 +52,7 @@ static void testRequestValid()
         Request req;
         std::string raw = "POST /api/upload HTTP/1.0\r\n"
                           "Content-Length: 42\r\n\r\n";
-        
+
         req.parseHeaders(raw);
         check("State is REQ_BODY",          req.getReqState() == REQ_BODY);
         check("Method parsed to POST",      req.getMethod() == POST);
@@ -63,7 +63,7 @@ static void testRequestValid()
         Request req;
         std::string raw = "POST /api/stream HTTP/1.0\r\n"
                           "Transfer-Encoding: chunked\r\n\r\n";
-        
+
         req.parseHeaders(raw);
         check("State is REQ_CHUNKED",       req.getReqState() == REQ_CHUNKED);
     }
@@ -72,7 +72,7 @@ static void testRequestValid()
         // Test HTTP/0.9 Backward Compatibility
         Request req;
         std::string raw = "GET /old_page\r\n\r\n";
-        
+
         req.parseHeaders(raw);
         check("Protocol is HTTP/0.9",       req.getProtocol() == "HTTP/0.9");
         check("State is REQ_DONE",          req.getReqState() == REQ_DONE);
@@ -84,13 +84,13 @@ static void testRequestErrors()
     std::cout << "\n-- Request Error Handling --\n";
 
     {
-        // Test HTTP/1.1 Rejection
+        // Test HTTP/1.1 Acceptance
         Request req;
         std::string raw = "GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
         req.parseHeaders(raw);
-        
-        check("HTTP/1.1 triggers REQ_ERROR", req.getReqState() == REQ_ERROR);
-        check("Returns 505 Not Supported",   req.getStatusCode() == "505");
+
+        check("HTTP/1.1 accepted as valid", req.getReqState() == REQ_DONE);
+        check("Returns 200 for valid HTTP/1.1",   req.getStatusCode() == "200");
     }
 
     {
@@ -98,7 +98,7 @@ static void testRequestErrors()
         Request req;
         std::string raw = "GET bad_path HTTP/1.0\r\n\r\n";
         req.parseHeaders(raw);
-        
+
         check("Missing '/' triggers REQ_ERROR", req.getReqState() == REQ_ERROR);
         check("Returns 400 Bad Request",        req.getStatusCode() == "400");
     }
@@ -108,7 +108,7 @@ static void testRequestErrors()
         Request req(100); // Max size of 100 bytes
         std::string raw = "POST / HTTP/1.0\r\nContent-Length: 105\r\n\r\n";
         req.parseHeaders(raw);
-        
+
         check("Oversized Content-Length caught", req.getReqState() == REQ_ERROR);
         check("Returns 413 Payload Too Large",   req.getStatusCode() == "413");
     }
@@ -118,7 +118,7 @@ static void testRequestErrors()
         Request req;
         std::string raw = "PATCH / HTTP/1.0\r\n\r\n";
         req.parseHeaders(raw);
-        
+
         check("Unknown method caught",         req.getReqState() == REQ_ERROR);
         check("Returns 501 Not Implemented",   req.getStatusCode() == "501");
     }
@@ -158,7 +158,7 @@ static void testRequestBodySlice()
     // 2. Simulate the socket receiving chunked data and pushing it to the DataStore
     // Format: 4 bytes ("Wiki"), 5 bytes ("pedia"), End Marker
     std::string rawChunkedPayload = "4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n";
-    
+
     // Force DataStore to RAM mode for the test
     req.getBodyStore().append(rawChunkedPayload.c_str(), rawChunkedPayload.size());
 
@@ -168,7 +168,7 @@ static void testRequestBodySlice()
     // 4. Validate
     check("processBodySlice returns true (finished)", result == true);
     check("isBodyProcessed is flagged",               req.isComplete() || req.getReqState() == REQ_CHUNKED); // Depending on how you transition state
-    
+
     // Check if the body was successfully unchunked into "Wikipedia"
     std::string decodedString;
     const std::vector<char>& vec = req.getBodyStore().getVector();
@@ -190,7 +190,7 @@ static void testRequestHeaderEdgeCases()
     std::string raw = "GET / HTTP/1.0\r\n"
                       " hOsT :   localhost  \r\n"
                       "CoNtEnT-LeNgTh: 0\r\n\r\n";
-    
+
     req.parseHeaders(raw);
 
     // Your map stores the exact key case parsed, so we test the exact key.
