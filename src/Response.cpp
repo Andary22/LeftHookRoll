@@ -1,6 +1,7 @@
 #include "../includes/Response.hpp"
 #include "../includes/LocationConf.hpp"
 #include "../includes/CGIManager.hpp"
+#include "../includes/FatalExceptions.hpp"
 
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -17,10 +18,21 @@
 #include <csignal>
 #include <sys/wait.h>
 
+extern volatile sig_atomic_t g_sigpipe;
+
 
 static const size_t RESPONSE_SEND_CHUNK = 16384;
 
 namespace {
+
+void throwIfSigpipe(const std::string& context)
+{
+	if (g_sigpipe != 0)
+	{
+		g_sigpipe = 0;
+		throw ClientException(502, std::string("SIGPIPE while ") + context);
+	}
+}
 
 bool isSetCookieHeader(const std::string& key)
 {
@@ -158,7 +170,7 @@ std::string buildDefaultErrorHtml(const std::string& code, const std::string& ph
 	html += code + " " + phrase;
 	html += "</h1>\r\n<p>LeftHookRoll/1.0</p>\r\n</body>\r\n</html>";
 	return html;
-}	
+}
 
 bool isPathSafe(const std::string& root, const std::string& resolved)
 {
@@ -405,11 +417,14 @@ bool Response::sendSlice(int fd)
 
 bool Response::_sendHeader(int fd)
 {
+	throwIfSigpipe("sending response header");
+
 	size_t headerSize = _headerBuffer.size();
 	size_t remaining  = headerSize - _totalBytesSent;
 	size_t toSend	 = std::min(remaining, _writeBufferSize);
 
 	ssize_t sent = send(fd, _headerBuffer.c_str() + _totalBytesSent, toSend, MSG_DONTWAIT);
+	throwIfSigpipe("sending response header");
 	if (sent <= 0)
 		return true;
 	_totalBytesSent += static_cast<size_t>(sent);
@@ -433,6 +448,8 @@ bool Response::_sendBodyStatic(int fd)
 
 bool Response::_sendBodyFile(int fd)
 {
+	throwIfSigpipe("sending response body file chunk");
+
 	if (_streamBufLen == 0)
 	{
 		_streamBuf.resize(_writeBufferSize);
@@ -449,6 +466,7 @@ bool Response::_sendBodyFile(int fd)
 
 	ssize_t sent = send(fd, &_streamBuf[0] + _streamBufSent,
 						_streamBufLen - _streamBufSent, MSG_DONTWAIT);
+	throwIfSigpipe("sending response body file chunk");
 	if (sent <= 0)
 	{
 		close(_fileFd);
@@ -472,6 +490,8 @@ bool Response::_sendBodyFile(int fd)
 
 bool Response::_sendBodyDataStore(int fd)
 {
+	throwIfSigpipe("sending response body datastore chunk");
+
 	size_t bodySize = _responseDataStore.getSize();
 
 	if (_responseDataStore.getMode() == RAM)
@@ -484,6 +504,7 @@ bool Response::_sendBodyDataStore(int fd)
 		size_t toSend = std::min(bodyRemaining, _writeBufferSize);
 		const std::vector<char>& vec = _responseDataStore.getVector();
 		ssize_t sent = send(fd, &vec[0] + bodyOffset, toSend, MSG_DONTWAIT);
+		throwIfSigpipe("sending response body datastore chunk");
 		if (sent <= 0)
 			return true;
 		_totalBytesSent += static_cast<size_t>(sent);
@@ -502,6 +523,7 @@ bool Response::_sendBodyDataStore(int fd)
 
 	ssize_t sent = send(fd, &_streamBuf[0] + _streamBufSent,
 						_streamBufLen - _streamBufSent, MSG_DONTWAIT);
+	throwIfSigpipe("sending response body datastore chunk");
 	if (sent <= 0)
 		return true;
 	_streamBufSent  += static_cast<size_t>(sent);
@@ -624,6 +646,8 @@ bool Response::_handlePost(Request& req, const LocationConf& loc, const ServerCo
 
 bool Response::_continuePostWrite(Request& req)
 {
+	throwIfSigpipe("writing request body to upload/CGI input");
+
 	DataStore& body = req.getBodyStore();
 	bool wroteAll = false;
 
@@ -635,6 +659,7 @@ bool Response::_continuePostWrite(Request& req)
 			size_t remaining = vec.size() - _postWritePos;
 			size_t toWrite = std::min(remaining, _writeBufferSize);
 			ssize_t written = write(_postOutFd, &vec[0] + _postWritePos, toWrite);
+			throwIfSigpipe("writing request body to upload/CGI input");
 			if (written <= 0)
 			{
 				close(_postOutFd);
@@ -655,6 +680,7 @@ bool Response::_continuePostWrite(Request& req)
 		if (n > 0)
 		{
 			ssize_t written = write(_postOutFd, buf, n);
+			throwIfSigpipe("writing request body to upload/CGI input");
 			if (written < 0 || static_cast<size_t>(written) != n)
 			{
 				close(_postOutFd);
@@ -890,12 +916,54 @@ void Response::finalizeCgiResponse()
 	_buildPhase = BUILD_DONE;
 
 	std::string cgiOutput = _drainDataStore();
+	const ServerConf* config = _cachedConfig;
+
+	if (cgiOutput.empty())
+	{
+		if (config)
+			buildErrorPage("502", *config);
+		else
+		{
+			setStatusCode("502");
+			setResponsePhrase("Bad Gateway");
+		}
+		delete _cgiInstance;
+		_cgiInstance = NULL;
+		return;
+	}
 
 	std::string cgiHeaders;
 	std::string cgiBody;
 	_splitCgiOutput(cgiOutput, cgiHeaders, cgiBody);
 
-	std::string contentType = _parseCgiHeaders(cgiHeaders);
+	if (cgiHeaders.empty())
+	{
+		if (config)
+			buildErrorPage("502", *config);
+		else
+		{
+			setStatusCode("502");
+			setResponsePhrase("Bad Gateway");
+		}
+		delete _cgiInstance;
+		_cgiInstance = NULL;
+		return;
+	}
+
+	std::string contentType = "text/html";
+	if (!_parseCgiHeaders(cgiHeaders, contentType))
+	{
+		if (config)
+			buildErrorPage("502", *config);
+		else
+		{
+			setStatusCode("502");
+			setResponsePhrase("Bad Gateway");
+		}
+		delete _cgiInstance;
+		_cgiInstance = NULL;
+		return;
+	}
 
 	_responseDataStore.clear();
 	if (!cgiBody.empty())
@@ -940,14 +1008,14 @@ void Response::_splitCgiOutput(const std::string& raw, std::string& headers, std
 	body = raw;
 }
 
-std::string Response::_parseCgiHeaders(const std::string& headerBlock)
+bool Response::_parseCgiHeaders(const std::string& headerBlock, std::string& contentType)
 {
-	std::string contentType = "text/html";
+	contentType = "text/html";
 	_statusCode = "200";
 	_response_phrase = "OK";
 
 	if (headerBlock.empty())
-		return contentType;
+		return false;
 
 	std::istringstream iss(headerBlock);
 	std::string line;
@@ -956,9 +1024,12 @@ std::string Response::_parseCgiHeaders(const std::string& headerBlock)
 		if (!line.empty() && line[line.size() - 1] == '\r')
 			line.erase(line.size() - 1);
 
+		if (line.empty())
+			continue;
+
 		size_t colonPos = line.find(':');
 		if (colonPos == std::string::npos)
-			continue;
+			return false;
 
 		std::string key = line.substr(0, colonPos);
 		std::string value = line.substr(colonPos + 1);
@@ -986,13 +1057,16 @@ std::string Response::_parseCgiHeaders(const std::string& headerBlock)
 				_statusCode = value;
 				_response_phrase = _lookupReasonPhrase(_statusCode);
 			}
+			if (_statusCode.size() != 3
+				|| _statusCode.find_first_not_of("0123456789") != std::string::npos)
+				return false;
 		}
 		else if (lowerKey == "location")
 			addHeader("Location", value);
 		else if (lowerKey == "set-cookie")
 			addHeader("Set-Cookie", value);
 	}
-	return contentType;
+	return true;
 }
 
 void Response::setStatusCode(const std::string& code)

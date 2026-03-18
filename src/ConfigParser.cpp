@@ -10,14 +10,9 @@
 // ConfigException
 
 ConfigParser::ConfigException::ConfigException(const std::string& msg)
-	: _msg("webserv: config error: " + msg) {}
+	: FatalException("webserv: config error: " + msg) {}
 
 ConfigParser::ConfigException::~ConfigException() throw() {}
-
-const char* ConfigParser::ConfigException::what() const throw()
-{
-	return _msg.c_str();
-}
 
 // Canonical form
 

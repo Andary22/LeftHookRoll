@@ -14,6 +14,8 @@
 #include <cstring>
 #include <iostream>
 #include <arpa/inet.h>
+#include "Request.hpp"
+
 class ServerConf
 {
 	public:
@@ -66,7 +68,7 @@ class ServerConf
 			_interfacePortPair.sin_addr.s_addr = INADDR_ANY;
 			_interfacePortPair.sin_port = htons(8080);
 			std::cout << "Default " << _serverName << " Listening on "
-					  << inet_ntoa(_interfacePortPair.sin_addr) << ":"
+					  << req_utils::ipv4ToString(_interfacePortPair) << ":"
 					  << ntohs(_interfacePortPair.sin_port) << std::endl;
 			}
 	private:

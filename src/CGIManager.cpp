@@ -1,6 +1,7 @@
 #include "../includes/CGIManager.hpp"
 #include "../includes/Request.hpp"
 #include "../includes/AllowedMethods.hpp"
+#include "../includes/FatalExceptions.hpp"
 
 #include <sys/wait.h>
 #include <csignal>
@@ -30,6 +31,13 @@ namespace CGIUtils
         if (ext == ".sh")
             return "/bin/sh";
         return "";
+    }
+
+    void closeInheritedFds()
+    {
+        // 3 to skip the standard fds.(in,out,err)
+        for (int fd = 3; fd < 1024; ++fd)
+            close(fd);
     }
 }
 
@@ -105,13 +113,13 @@ void CGIManager::prepare(const Request& request, const std::string& scriptPath, 
 void CGIManager::execute(int inputFd)
 {
     if (pipe(_outPipe) == -1)
-        throw std::runtime_error("CGIManager::execute: pipe() failed");
+        throw ClientException(500, "CGIManager::execute: pipe() failed");
 
     _pId = fork();
     if (_pId < 0)
     {
         _closePipes();
-        throw std::runtime_error("CGIManager::execute: fork() failed");
+        throw ClientException(500, "CGIManager::execute: fork() failed");
     }
 
     if (_pId == 0)
@@ -119,20 +127,25 @@ void CGIManager::execute(int inputFd)
         if (inputFd >= 0)
         {
             if (dup2(inputFd, STDIN_FILENO) == -1)
-                _exit(1);
+                throw FatalException("CGI child fatal: dup2(stdin) failed");
         }
         close(_outPipe[0]);
         if (dup2(_outPipe[1], STDOUT_FILENO) == -1)
-            _exit(1);
+            throw FatalException("CGI child fatal: dup2(stdout) failed");
         close(_outPipe[1]);
 
+		CGIUtils::closeInheritedFds();
+
         execve(_execveArgv[0], _execveArgv, _execveEnvp);
-        _exit(1);
+        throw FatalException("CGI child fatal: execve() failed");
     }
-    // Parent process - register the PID for tracking
-    _registerPid(_pId);
-    close(_outPipe[1]);
-    _outPipe[1] = -1;
+    else
+    {
+        // Parent process - register the PID for tracking
+        _registerPid(_pId);
+        close(_outPipe[1]);
+        _outPipe[1] = -1;
+    }
 }
 
 bool CGIManager::isDone()
