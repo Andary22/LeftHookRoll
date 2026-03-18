@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include "../includes/CGIManager.hpp"
 #include "../includes/Request.hpp"
-#include "../includes/AllowedMethods.hpp"
 
 // g++ ./test_cgi.cpp ../src/CGIManager.cpp ../src/Request.cpp ../src/DataStore.cpp ../src/AllowedMethods.cpp -o test_cgi
 // ============================================================================
