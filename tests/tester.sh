@@ -107,12 +107,13 @@ compile_test() {
 	local test_file="$1"
 	local output_binary="$2"
 	local test_name=$(basename "$test_file" .cpp)
+	local test_support_sources="${TESTS_DIR}/stub_globals.cpp"
 
 	print_info "Compiling $test_name..."
 
 	local src_files=$(collect_source_files)
 
-	if ${CXX} ${CXXFLAGS} "${test_file}" ${src_files} -o "${output_binary}" 2>&1 | tee -a "${RESULTS_FILE}"; then
+	if ${CXX} ${CXXFLAGS} "${test_file}" ${src_files} ${test_support_sources} -o "${output_binary}" 2>&1 | tee -a "${RESULTS_FILE}"; then
 		print_success "Compiled $test_name"
 		return 0
 	else

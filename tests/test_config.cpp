@@ -139,7 +139,7 @@ static void testConfigParser()
 {
 	std::cout << "\n-- ConfigParser --\n";
 
-	ConfigParser parser("tests/webserv.conf");
+	ConfigParser parser("tests/unit_testing.conf");
 	std::vector<ServerConf> servers = parser.parse();
 
 	check("two server blocks parsed",      servers.size() == 2);
@@ -158,23 +158,27 @@ static void testConfigParser()
 	check("s0 listen IP 127.0.0.1",
 		s0.getInterfacePortPair().sin_addr.s_addr == expected.s_addr);
 
-	check("s0 three location blocks",      s0.getLocations().size() == 3);
+	check("s0 four location blocks",      s0.getLocations().size() == 4);
 
 	const LocationConf& root = s0.getLocations()[0];
 	check("s0 loc[0] path = /",            root.getPath() == "/");
-	check("s0 loc[0] root",                root.getRoot() == "/var/www/html");
+	check("s0 loc[0] root",                root.getRoot() == ".");
 	check("s0 loc[0] GET allowed",         root.isMethodAllowed(GET));
 	check("s0 loc[0] POST allowed",        root.isMethodAllowed(POST));
 	check("s0 loc[0] DELETE not allowed",  !root.isMethodAllowed(DELETE));
 	check("s0 loc[0] autoindex off",       !root.getAutoIndex());
 	check("s0 loc[0] index = index.html",  root.getDefaultPage() == "index.html");
 
-	const LocationConf& upload = s0.getLocations()[1];
-	check("s0 loc[1] upload_store",        upload.getStorageLocation() == "/tmp/uploads");
+	const LocationConf& testsLoc = s0.getLocations()[1];
+	check("s0 loc[1] path = /tests", testsLoc.getPath() == "/tests");
+	check("s0 loc[1] root is .", testsLoc.getRoot() == ".");
 
-	const LocationConf& redir = s0.getLocations()[2];
-	check("s0 loc[2] return code 301",     redir.getReturnCode() == "301");
-	check("s0 loc[2] return URL",          redir.getReturnURL() == "https://example.com/new");
+	const LocationConf& upload = s0.getLocations()[2];
+	check("s0 loc[2] upload_store",        upload.getStorageLocation() == "/tmp/uploads");
+
+	const LocationConf& redir = s0.getLocations()[3];
+	check("s0 loc[3] return code 301",     redir.getReturnCode() == "301");
+	check("s0 loc[3] return URL",          redir.getReturnURL() == "https://example.com/new");
 
 	// --- Second server ---
 	const ServerConf& s1 = servers[1];

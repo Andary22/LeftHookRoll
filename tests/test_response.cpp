@@ -352,8 +352,8 @@ static void testRouting() {
         Request req = makeRequest("PATCH /index.html HTTP/1.1\r\nHost: x\r\n\r\n");
         Response r;
         r.buildResponse(req, conf);
-        check("unknown method (PATCH/PUT/etc.) yields 405 via method bitmap check",
-              r.getStatusCode() == "405");
+        check("unknown method (PATCH/PUT/etc.) yields 501 from request parsing",
+              r.getStatusCode() == "501");
     }
 }
 
@@ -586,53 +586,37 @@ static void testWireFormat() {
           wire.size() == heads.size() + 4 + bodyLen);
 }
 
-    static void testSetCookieHeaders() {
-        std::cout << "\n-- Set-Cookie headers --\n";
+static void testSetCookieHeaders() {
+	std::cout << "\n-- Set-Cookie headers --\n";
 
-        {
-          ServerConf conf = makeConf(TEST_ROOT, GET);
-          Response r;
-          r.buildErrorPage("404", conf);
+	{
+		ServerConf conf = makeConf(TEST_ROOT, GET);
+		Response r;
+        Request req = makeRequest("GET /index.html HTTP/1.1\r\nHost: x\r\n\r\n");
+        r.buildResponse(req, conf);
 
-          Response::CookieOptions sidOpt;
-          sidOpt.path = "/";
-          sidOpt.httpOnly = true;
-          sidOpt.sameSite = "Lax";
-          r.addCookie("sid", "abc123", sidOpt);
+		std::string wire = drainResponse(r);
+		std::string heads = headerOf(wire);
 
-          Response::CookieOptions themeOpt;
-          themeOpt.path = "/";
-          r.addCookie("theme", "dark", themeOpt);
+		check("one Set-Cookie header line is emitted",
+			countOccurrences(heads, "Set-Cookie: ") == 1);
+		check("session_count initialized to 1",
+			heads.find("Set-Cookie: session_count=1; Path=/") != std::string::npos);
+	}
 
-          std::string wire = drainResponse(r);
-          std::string heads = headerOf(wire);
+	{
+		ServerConf conf = makeConf(TEST_ROOT, GET);
+		Response r;
+        Request req = makeRequest("GET /index.html HTTP/1.1\r\nHost: x\r\nCookie: session_count=41\r\n\r\n");
+        r.buildResponse(req, conf);
 
-          check("two Set-Cookie header lines are emitted",
-              countOccurrences(heads, "Set-Cookie: ") == 2);
-          check("sid cookie contains HttpOnly and SameSite",
-              heads.find("Set-Cookie: sid=abc123; Path=/; SameSite=Lax; HttpOnly") != std::string::npos);
-          check("theme cookie line is present",
-              heads.find("Set-Cookie: theme=dark; Path=/") != std::string::npos);
-        }
+		std::string wire = drainResponse(r);
+		std::string heads = headerOf(wire);
 
-        {
-          ServerConf conf = makeConf(TEST_ROOT, GET);
-          Response r;
-          r.buildErrorPage("404", conf);
-
-          Response::CookieOptions deleteOpt;
-          deleteOpt.path = "/";
-          deleteOpt.hasMaxAge = true;
-          deleteOpt.maxAge = 0;
-          r.addCookie("sid", "", deleteOpt);
-
-          std::string wire = drainResponse(r);
-          std::string heads = headerOf(wire);
-
-          check("delete cookie uses Max-Age=0",
-              heads.find("Set-Cookie: sid=; Path=/; Max-Age=0") != std::string::npos);
-        }
-    }
+		check("session_count increments existing value",
+			heads.find("Set-Cookie: session_count=42; Path=/") != std::string::npos);
+	}
+}
 
 int main() {
     setupFixtures();
