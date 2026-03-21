@@ -114,7 +114,7 @@ void ServerManager::addServer(const ServerConf* conf)
 	_listenFdToServerConf[fd] = conf;
 	addPollFd(fd, EPOLLIN);
 
-	std::cout << "Listening on "
+	std::cout << "Server "<< conf->getServerName() << " Listening on "
 			  << req_utils::ipv4ToString(addr) << ":"
 			  << ntohs(addr.sin_port) << std::endl;
 }
