@@ -11,11 +11,9 @@
 
 //There's a zombie on your lawn...
 std::set<pid_t> CGIManager::_activePids;
-
-namespace
-{
-    const size_t MAX_ACTIVE_CGI_CHILDREN = 64;
-}
+#ifndef MAX_ACTIVE_CGI_CHILDREN
+# define MAX_ACTIVE_CGI_CHILDREN  64;
+#endif
 
 namespace CGIUtils
 {
