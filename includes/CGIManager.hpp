@@ -75,6 +75,8 @@ class CGIManager
 		void	_prepExecveArrays();
 		void	_freeExecveArrays();
 		void	_closePipes();
+		static void _reapFinishedActivePids();
+		static bool _isSpawnLimitReached();
 
 	static std::set<pid_t> _activePids;
 	static void _registerPid(pid_t pid);

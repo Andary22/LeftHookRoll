@@ -6,38 +6,62 @@
 #include <sys/wait.h>
 #include <csignal>
 #include <ctime>
+#include <cerrno>
+
 
 //There's a zombie on your lawn...
 std::set<pid_t> CGIManager::_activePids;
 
+namespace
+{
+    const size_t MAX_ACTIVE_CGI_CHILDREN = 64;
+}
+
 namespace CGIUtils
 {
-    /**
-     * @brief Determines the interpreter binary for common script extensions.
-     * @return Empty string if the script is a native executable.
-     */
-    std::string interpreterForScript(const std::string& scriptPath)
-    {
-        std::string::size_type dot = scriptPath.rfind('.');
-        if (dot == std::string::npos)
-            return "";
-        std::string ext = scriptPath.substr(dot);
-        if (ext == ".py")
-            return "/usr/bin/python3";
-        if (ext == ".pl")
-            return "/usr/bin/perl";
-        if (ext == ".rb")
-            return "/usr/bin/ruby";
-        if (ext == ".sh")
-            return "/bin/sh";
-        return "";
-    }
-
     void closeInheritedFds()
     {
         // 3 to skip the standard fds.(in,out,err)
         for (int fd = 3; fd < 1024; ++fd)
             close(fd);
+    }
+
+    std::string resolveScriptDirectory(const std::string& scriptPath)
+    {
+        size_t slashPos = scriptPath.find_last_of('/');
+        if (slashPos == std::string::npos)
+            return ".";
+        if (slashPos == 0)
+            return "/";
+        return scriptPath.substr(0, slashPos);
+    }
+
+    std::string resolveScriptExecArg(const std::string& scriptPath)
+    {
+        if (!scriptPath.empty() && scriptPath[0] == '/')
+            return scriptPath;
+
+        size_t slashPos = scriptPath.find_last_of('/');
+        if (slashPos == std::string::npos)
+            return scriptPath;
+        return scriptPath.substr(slashPos + 1);
+    }
+
+    void prepareChildExecutionContext(const std::vector<std::string>& scriptArgv, char** execveArgv)
+    {
+        if (scriptArgv.empty())
+            throw FatalException("CGI child fatal: missing script path");
+
+        const std::string& scriptPath = scriptArgv.back();
+        std::string scriptDir = resolveScriptDirectory(scriptPath);
+        if (chdir(scriptDir.c_str()) == -1)
+            throw FatalException("CGI child fatal: chdir() failed");
+
+        std::string scriptExecArg = resolveScriptExecArg(scriptPath);
+        if (scriptArgv.size() > 1)
+            std::strcpy(execveArgv[1], scriptExecArg.c_str());
+        else
+            std::strcpy(execveArgv[0], scriptExecArg.c_str());
     }
 }
 
@@ -101,8 +125,6 @@ void CGIManager::prepare(const Request& request, const std::string& scriptPath, 
     std::string interp;
     if (!interpreterOverride.empty())
         interp = interpreterOverride;
-    else
-        interp = CGIUtils::interpreterForScript(scriptPath);
     if (!interp.empty())
         _scriptArgv.push_back(interp);
     _scriptArgv.push_back(scriptPath);
@@ -112,6 +134,9 @@ void CGIManager::prepare(const Request& request, const std::string& scriptPath, 
 
 void CGIManager::execute(int inputFd)
 {
+    if (_isSpawnLimitReached())
+        throw ClientException(503, "CGIManager::execute: max active CGI children reached");
+
     if (pipe(_outPipe) == -1)
         throw ClientException(500, "CGIManager::execute: pipe() failed");
 
@@ -124,6 +149,7 @@ void CGIManager::execute(int inputFd)
 
     if (_pId == 0)
     {
+        CGIUtils::prepareChildExecutionContext(_scriptArgv, _execveArgv);
         if (inputFd >= 0)
         {
             if (dup2(inputFd, STDIN_FILENO) == -1)
@@ -141,7 +167,6 @@ void CGIManager::execute(int inputFd)
     }
     else
     {
-        // Parent process - register the PID for tracking
         _registerPid(_pId);
         close(_outPipe[1]);
         _outPipe[1] = -1;
@@ -263,6 +288,28 @@ void CGIManager::_registerPid(pid_t pid)
 {
     if (pid > 0)
         _activePids.insert(pid);
+}
+
+void CGIManager::_reapFinishedActivePids()
+{
+    if (_activePids.empty())
+        return;
+
+    std::set<pid_t> stillRunning;
+    for (std::set<pid_t>::iterator it = _activePids.begin(); it != _activePids.end(); ++it)
+    {
+        int status = 0;
+        pid_t result = waitpid(*it, &status, WNOHANG);
+        if (result == 0 || (result < 0 && errno == EINTR))
+            stillRunning.insert(*it);
+    }
+    _activePids = stillRunning;
+}
+
+bool CGIManager::_isSpawnLimitReached()
+{
+    _reapFinishedActivePids();
+    return _activePids.size() >= MAX_ACTIVE_CGI_CHILDREN;
 }
 
 void CGIManager::_unregisterPid(pid_t pid)
