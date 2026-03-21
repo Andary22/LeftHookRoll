@@ -15,7 +15,7 @@ void DataStore::write_all(int fd, const char* data, size_t length) {
 	while (offset < length) {
 		ssize_t written = ::write(fd, data + offset, length - offset);
 		if (written < 0) {
-			if (errno == EINTR) continue;
+			// if (errno == EINTR) continue; TBD
 			throw std::runtime_error(std::string("DataStore: write failed - ") + std::strerror(errno));
 		}
 		if (written == 0) {
@@ -42,7 +42,7 @@ void DataStore::copy_fd_contents(const std::string& srcPath, int dstFd, size_t t
 			ssize_t readBytes = ::read(srcFd, &buffer[0], toRead);
 
 			if (readBytes < 0) {
-				if (errno == EINTR) continue;
+				// if (errno == EINTR) continue; TBD
 				throw std::runtime_error(std::string("DataStore: read failed during copy - ") + std::strerror(errno));
 			}
 			if (readBytes == 0) {
@@ -208,7 +208,7 @@ size_t DataStore::read(char* buffer, size_t length) {
 		while (totalRead < toRead) {
 			ssize_t bytesRead = ::read(_fileFd, buffer + totalRead, toRead - totalRead);
 			if (bytesRead < 0) {
-				if (errno == EINTR) continue;
+				// if (errno == EINTR) continue; TBD
 				throw std::runtime_error(std::string("DataStore: read failed - ") + std::strerror(errno));
 			}
 			if (bytesRead == 0) {

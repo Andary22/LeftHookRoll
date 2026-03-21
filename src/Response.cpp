@@ -611,7 +611,7 @@ bool Response::_handlePost(Request& req, const LocationConf& loc, const ServerCo
 
 	if (storageDir.empty())
 	{
-		buildErrorPage("501", config);
+		buildErrorPage("503", config);
 		return true;
 	}
 
@@ -748,7 +748,22 @@ bool Response::_handleCGI(Request& req, const LocationConf& loc, const ServerCon
 	if (body.getSize() > 0 && body.getMode() == FILE_MODE)
 		inputFd = body.getFd();
 
-	_cgiInstance->execute(inputFd);
+	try
+	{
+		_cgiInstance->execute(inputFd);
+	}
+	catch (const ClientException& e)
+	{
+		delete _cgiInstance;
+		_cgiInstance = NULL;
+		if (e.getStatusCode() == 503)
+		{
+			buildErrorPage("503", config);
+			addHeader("Retry-After", "5");
+			return true;
+		}
+		throw;
+	}
 	_buildPhase = BUILD_CGI_RUNNING;
 	_cachedConfig = &config;
 	return false;
@@ -884,8 +899,8 @@ bool Response::readCgiOutput()
 		return true;
 	}
 
-	if (errno == EINTR)
-		return false;
+	// if (errno == EINTR) TBD
+		// return false;
 	//if it's a real error need to kill.
 	_cgiInstance->isDone();
 	return true;
@@ -1163,7 +1178,7 @@ std::string Response::_lookupReasonPhrase(const std::string& code) {
 	if (code == "411")
 		return "Length Required";
 	if (code == "413")
-		return "Payload Too Large";
+		return "Content Too Large";
 	if (code == "414")
 		return "URI Too Long";
 	if (code == "500")
