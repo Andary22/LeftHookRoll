@@ -565,8 +565,8 @@ static void testPostUpload() {
         Request req = makeRequest("POST /data HTTP/1.1\r\nHost: x\r\n\r\n");
         Response r;
         r.buildResponse(req, conf);
-        check("POST with no storageLocation yields 501",
-              r.getStatusCode() == "501");
+          check("POST with no storageLocation yields 503",
+              r.getStatusCode() == "503");
     }
 
     {

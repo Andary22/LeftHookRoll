@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-
 def get_cookie_value(cookie_str, name):
     if not cookie_str:
         return None
