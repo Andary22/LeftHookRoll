@@ -21,7 +21,10 @@ namespace cgi_utils
     {
         // 3 to skip the standard fds.(in,out,err)
         for (int fd = 3; fd < 1024; ++fd)
-            close(fd);
+        {
+            if (fcntl(fd, F_GETFD) != -1)
+                close(fd);
+        }
     }
 
     std::string resolveScriptDirectory(const std::string& scriptPath)

@@ -5,6 +5,7 @@
  */
 
 #include "../includes/DataStore.hpp"
+#include <cstdio>
 
 
 /**
@@ -157,6 +158,9 @@ void DataStore::clear() {
 		::close(_fileFd);
 		_fileFd = -1;
 	}
+	if (!_absolutePath.empty()) {
+		std::remove(_absolutePath.c_str());
+	}
 	_absolutePath.clear();
 }
 
@@ -271,7 +275,7 @@ void DataStore::switchToFileMode() {
  * @brief Generates a unique temporary filename (e.g., FILEPREFIX_XXXXXX).
  */
 void DataStore::_generateTempFileName() {
-	static int file_counter = 0;
+	static long long file_counter = 0;//assuming 1 file created per second, this will take 21 times the age of the universe to wrap around, so should be safe for our humble webserv.
 	int fd = -1;
 	std::string currentName;
 

@@ -443,6 +443,7 @@ bool Response::_sendBodyStatic(int fd)
 {
 	if (_fileFd != -1)
 		return _sendBodyFile(fd);
+	_responseDataStore.resetReadPosition();
 	return _sendBodyDataStore(fd);
 }
 
