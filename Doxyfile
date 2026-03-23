@@ -1,0 +1,53 @@
+# LeftHookRoll Doxygen configuration
+# Purpose: generate API docs + class/include graphs from existing C++ headers.
+
+PROJECT_NAME           = "LeftHookRoll"
+PROJECT_BRIEF          = "An HTTP/1.0 compliant web server, as specified by RFC1945"
+OUTPUT_DIRECTORY       = ./doxygen
+CREATE_SUBDIRS         = NO
+
+# Inputs
+INPUT                  = includes src README.md ./doxygen_pages.md
+FILE_PATTERNS          = *.hpp *.cpp *.md
+RECURSIVE              = YES
+EXCLUDE                = ofiles tests clickme examples
+USE_MDFILE_AS_MAINPAGE = ./doxygen_pages.md
+
+# Extraction
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+HIDE_UNDOC_CLASSES     = NO
+HIDE_UNDOC_MEMBERS     = NO
+SORT_MEMBER_DOCS       = NO
+
+# Output formats
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+
+# Graphs via Graphviz (dot)
+HAVE_DOT               = YES
+UML_LOOK               = YES
+COLLABORATION_GRAPH    = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+DOT_GRAPH_MAX_NODES    = 80
+MAX_DOT_GRAPH_DEPTH    = 0
+DOT_CLEANUP            = NO
+
+# Noise control
+QUIET                  = NO
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+
+# Better source browsing
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+FULL_PATH_NAMES        = NO

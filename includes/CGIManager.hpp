@@ -38,7 +38,7 @@ class CGIManager
 
 		/**
 		 * @brief Forks, redirs input file and outpipe, and executes the CGI script.
-		 * @param inputFD the fd of the temp file(data store) containing the fully received request body.
+		 * @param inputFd the fd of the temp file(data store) containing the fully received request body.
 		 * @warning this implementation requires that the request body is fully received before executing the CGI script,
 		 * we handle large request bodies by writing them to a temp file and passing the fd to the CGI script,
 		 * but this also means that we can't start executing the CGI script until we've fully received the request body,

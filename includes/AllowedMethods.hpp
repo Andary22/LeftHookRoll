@@ -1,5 +1,5 @@
 /**
- * @file HTTPMethods.hpp
+ * @file AllowedMethods.hpp
  * @author Yaman Al-Rifai(you@domain.com)
  * @brief
  * @version 0.1

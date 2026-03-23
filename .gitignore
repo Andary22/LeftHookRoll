@@ -7,3 +7,4 @@ ofiles/
 # Ignore GitHub workflows
 .github/
 AGENTS.md
+doxygen/

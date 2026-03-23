@@ -15,7 +15,7 @@ std::set<pid_t> CGIManager::_activePids;
 # define MAX_ACTIVE_CGI_CHILDREN  64;
 #endif
 
-namespace CGIUtils
+namespace cgi_utils
 {
     void closeInheritedFds()
     {
@@ -147,7 +147,7 @@ void CGIManager::execute(int inputFd)
 
     if (_pId == 0)
     {
-        CGIUtils::prepareChildExecutionContext(_scriptArgv, _execveArgv);
+        cgi_utils::prepareChildExecutionContext(_scriptArgv, _execveArgv);
         if (inputFd >= 0)
         {
             if (dup2(inputFd, STDIN_FILENO) == -1)
@@ -158,7 +158,7 @@ void CGIManager::execute(int inputFd)
             throw FatalException("CGI child fatal: dup2(stdout) failed");
         close(_outPipe[1]);
 
-		CGIUtils::closeInheritedFds();
+		cgi_utils::closeInheritedFds();
 
         execve(_execveArgv[0], _execveArgv, _execveEnvp);
         throw FatalException("CGI child fatal: execve() failed");
