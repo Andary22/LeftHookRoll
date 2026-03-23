@@ -25,9 +25,9 @@ namespace req_utils
  */
 enum ReqState
 {
-	REQ_HEADERS,	// Waiting for \r\n\r\n and parsing Request-Line & Headers
+	REQ_HEADERS,	// Waiting for "\r\n\r\n" and parsing Request-Line & Headers
 	REQ_BODY,	 	// Headers parsed, waiting for Content-Length bytes
-	REQ_CHUNKED,	// Headers parsed, accumulating raw chunks until 0\r\n\r\n
+	REQ_CHUNKED,	// Headers parsed, accumulating raw chunks until "\r\n\r\n"
 	REQ_DONE,		// The entire request has been successfully received from the socket(often times for HTTP/0.9)
 	REQ_ERROR		// A parsing error occurred
 };
@@ -45,15 +45,15 @@ public:
 
 	/**
 	 * @brief Parses the raw buffer containing the HTTP Request-Line and Headers.
-	 * Transitions state to REQ_BODY, REQ_CHUNKED, or REQ_DONE upon finding \r\n\r\n.
+	 * Transitions state to REQ_BODY, REQ_CHUNKED, or REQ_DONE upon finding "\r\n\r\n".
 	 * @param rawBuffer The string buffer accumulated by the Connection.
-	 * @return size_t The index at which the headers end (after \r\n\r\n).
+	 * @return size_t The index at which the headers end (after "\r\n\r\n").
 	 * Useful for slicing leftover body data that recv() accidentally grabbed.
 	 */
 	size_t parseHeaders(const std::string& rawBuffer);
 
 	/**
-	 * @brief Checks if the incoming chunked data contains the terminal "0\r\n\r\n".
+	 * @brief Checks if the incoming chunked data contains the terminal "\r\n\r\n".
 	 * Used to transition from REQ_CHUNKED to REQ_DONE.
 	 * @param newData The latest chunk of data received from the socket.
 	 * @return true if the terminal chunk is found, false otherwise.
@@ -122,7 +122,7 @@ private:
 	//  Chunk Decoding State (filled per chunk)
 	size_t							  _chunkSize;
 	size_t							  _chunkDecodeOffset;
-	bool							  _isBodyProcessed;   //set on \r\n\r\n
+	bool							  _isBodyProcessed;   //set on "\r\n\r\n"
 	std::string						  _chunkBuffer; // accumulates raw chunked data until we can decode a full chunk.
 	size_t							  _ramParsePos;
 
