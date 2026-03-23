@@ -26,10 +26,14 @@ It is fully HTTP/1.0 compliant and supports the methods `GET`, `POST`, and `DELE
 The server operates on a single thread while still being fully non-blocking, achieving 100% availability on siege \
 through the use of I/O multiplexing via `epoll()` and a stateful concurrency machine.
 
+(complete documentation available through Doxygen, see [Documentation section](#documentation) \
 
-(UML diagram of the server architecture here)\
-(cool-looking dependency graph here)\
-(sequence diagram of request handling here)
+
+![dependency graph](docs/assets/main_dep.svg)
+*the dependency graph for main.cpp, generated using Doxygen*
+
+![class diagram](docs/assets/connection_relations.svg)
+*the class relationship diagram for the `Connection` class, the beefiest class in our project*
 
 # Instructions
 
@@ -189,7 +193,7 @@ The most helpful resources we used:
 
 AI was used to assist and speed up the code-writing process. To ensure quality and resilient code, testing suites and a rigorous code review process were put in place; no code was written without at least 2 human eyes reviewing it.\
 AI was also used to *proofread* docs such as this document (;  \
-Architectural design, implementation details, and code structure were all human efforts.
+Architectural design and code structure were all human efforts.
 
 # Contributing
 
