@@ -199,7 +199,10 @@ void ServerManager::_handleConnection(Connection* conn, uint32_t events)
 		{
 			conn->handleRead();
 			if (conn->getState() == PROCESSING)
+			{
+				conn->getRequest()->getBodyStore().resetReadPosition();
 				_enqueueProcessing(conn);
+			}
 		}
 		if ((events & EPOLLOUT) && conn->getState() == WRITING)
 			conn->handleWrite();

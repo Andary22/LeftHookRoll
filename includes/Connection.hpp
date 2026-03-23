@@ -79,6 +79,7 @@ class Connection
 		ConnectionState	getState() const;
 		void			setState(ConnectionState state);
 		Response*		getResponse() const;
+		Request*		getRequest() const;
 		const ServerConf*	getServerConf() const;
 
 		/**
