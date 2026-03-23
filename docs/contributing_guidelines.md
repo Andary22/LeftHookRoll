@@ -29,4 +29,4 @@ always be named according to the class name.
 	- try to not merge to main directly, and always create a PR, even for small changes, this allows for code review and discussion, and greater understanding of the project for all of us.
 - when you are the one reviewing a PR, hold it accountable to the guidelines.
 
-Ramadan Kareem ;p
+Eid Mubarak ;p

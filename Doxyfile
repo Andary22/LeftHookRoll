@@ -3,15 +3,15 @@
 
 PROJECT_NAME           = "LeftHookRoll"
 PROJECT_BRIEF          = "An HTTP/1.0 compliant web server, as specified by RFC1945"
-OUTPUT_DIRECTORY       = ./doxygen
+OUTPUT_DIRECTORY       = docs/doxygen
 CREATE_SUBDIRS         = NO
 
 # Inputs
-INPUT                  = includes src README.md ./doxygen_pages.md
+INPUT                  = includes src README.md
 FILE_PATTERNS          = *.hpp *.cpp *.md
 RECURSIVE              = YES
 EXCLUDE                = ofiles tests clickme examples
-USE_MDFILE_AS_MAINPAGE = ./doxygen_pages.md
+USE_MDFILE_AS_MAINPAGE = README.md
 
 # Extraction
 EXTRACT_ALL            = YES

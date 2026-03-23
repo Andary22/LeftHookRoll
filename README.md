@@ -1,17 +1,77 @@
-*This project has been created as part of the 42 curriculum by  Yaman Alrifai, Hamzah Beliah, and Yousef Kitaneh.*
-
+*This project was created as part of the 42 curriculum by Yaman Alrifai, Hamzah Beliah, and Yousef Kitaneh.*
 
 ---
+
+**Table of Contents**
+- [Description](#description)
+- [Instructions](#instructions)
+  - [Building and Running](#building-and-running)
+  - [Dependencies](#dependencies)
+  - [Configuration File](#configuration-file)
+    - [Syntax Rules](#syntax-rules)
+    - [Server Block](#server-block)
+    - [Location Block](#location-block)
+    - [CGI Configuration](#cgi-configuration)
+- [Resources](#resources)
+  - [Documentation](#documentation)
+  - [Tests](#tests)
+  - [Informational](#informational)
+  - [Tools](#tools)
+  - [AI Usage](#ai-usage)
+- [Contributing](#contributing)
+
+# Description
+LeftHookRoll is a simple HTTP server implemented in C++. \
+It is fully HTTP/1.0 compliant and supports the methods `GET`, `POST`, and `DELETE`, as well as dynamic CGI scripting functionality.\
+The server operates on a single thread while still being fully non-blocking, achieving 100% availability on siege \
+through the use of I/O multiplexing via `epoll()` and a stateful concurrency machine.
+
+
+(UML diagram of the server architecture here)\
+(cool-looking dependency graph here)\
+(sequence diagram of request handling here)
+
 # Instructions
+
+## Building and Running
+At the root of the project, run:
+
+```bash
+    make
+    ./server [config_file]
+```
+
+Additional `make` commands:
+
+```bash
+    make \
+        clean       # removes object files
+        fclean      # removes object files and executables
+        re          # clean rebuild of project
+        docs        # generates documentation using Doxygen
+        docs-clean  # removes generated documentation
+```
+
+Details and syntax for writing the conf file are covered in [Configuration File section](#configuration-file). A sample conf file is provided in `examples/confs`.
+In addition to that, an `autoconf.sh` script is provided to guide you through the process of setting up a configuration file.
+
+## Dependencies
+- a C++98 compiler
+- a system that supports `epoll()` (Linux 🐧) \
+*optional*:
+- `doxygen` for generating documentation
+- `graphviz` for generating system graphs in documentation
+
 ## Configuration File
 
-The server is configured via a text file following Nginx inspired syntax.
+The server is configured via a text file following Nginx-inspired syntax.
 
 ### Syntax Rules
 - **Blocks** are enclosed in curly braces `{}`. Everything lives inside a `server` block.
 - **Directives** end with a semicolon `;`.
 - **Comments** start with `#` and extend to the end of the line.
-- **Whitespaces** are ignored (spaces, tabs, newlines).
+- **Whitespace** is ignored (spaces, tabs, newlines).
+
 ### Server Block
 
 ```nginx
@@ -55,9 +115,6 @@ location /path {
 
 CGI is configured per-location using the `cgi_interpreter` directive. Each directive maps a file extension to an interpreter binary. Multiple `cgi_interpreter` directives can be specified in a single location block to support different script types.
 
-
-If the `cgi_interpreter` path is left as an empty string or the extension's interpreter is auto-detectable (`.py`, `.pl`, `.rb`, `.sh`), the server falls back to a limited built-in interpreter lookup.
-
 ```nginx
 server {
     listen 8080;
@@ -93,3 +150,47 @@ server {
     }
 }
 ```
+
+# Resources
+
+## Documentation
+
+Doxygen-generated documentation is available. To generate it, run `make docs` at the root of the project.\
+Generated documentation will be located in `docs/doxygen/html/index.html`. It includes detailed descriptions \
+of the server's architecture, design decisions, and implementation details, \
+as well as system graphs generated using Graphviz.
+
+## Tests
+
+A suite of tests is provided in the `tests` directory, to run:
+
+```bash
+./tests/tester.sh [help|standard|valgrind]
+```
+
+## Informational
+
+The most helpful resources we used:
+- [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
+- [HTTP 1.0 RFC](https://datatracker.ietf.org/doc/html/rfc1945)
+- [HTTP in depth](https://cs.fyi/guide/http-in-depth)
+- [CGI RFC](https://datatracker.ietf.org/doc/html/rfc3875)
+- [Understanding epoll](https://copyconstruct.medium.com/the-method-to-epolls-madness-d9d2d6378642)
+- [Mozilla's HTTP docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference)
+- [nginx conf file syntax](https://nginx.org/en/docs/beginners_guide.html#conf_structure) (as inspiration)
+
+## Tools
+
+ - `siege` for load testing and benchmarking the server's performance.
+ - [Draw.io](https://app.diagrams.net/) was used to collaborate on the specification and design of the server.
+ - github was used for version control, code review, and project management.
+- `doxygen` and `graphviz` were used to generate real-time documentation and system graphs.
+## AI Usage
+
+AI was used to assist and speed up the code-writing process. To ensure quality and resilient code, testing suites and a rigorous code review process were put in place; no code was written without at least 2 human eyes reviewing it.\
+AI was also used to *proofread* docs such as this document (;  \
+Architectural design, implementation details, and code structure were all human efforts.
+
+# Contributing
+
+Although this project was created for educational purposes, contributions and questions are welcome. If you have any suggestions or questions, feel free to open an issue, submit a pull request, or reach out. The code standards we followed are detailed [here](docs/contributing_guidelines.md).
