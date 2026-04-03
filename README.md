@@ -26,7 +26,7 @@ It is fully HTTP/1.0 compliant and supports the methods `GET`, `POST`, and `DELE
 The server operates on a single thread while still being fully non-blocking, achieving 100% availability on siege \
 through the use of I/O multiplexing via `epoll()` and a stateful concurrency machine.
 
-(complete documentation available through Doxygen, see [Documentation section](#documentation) \
+(complete documentation available through Doxygen, see [Documentation section](#documentation)
 
 
 ![dependency graph](docs/assets/main_dep.svg)

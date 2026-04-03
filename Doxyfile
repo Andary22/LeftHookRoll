@@ -12,6 +12,7 @@ FILE_PATTERNS          = *.hpp *.cpp *.md
 RECURSIVE              = YES
 EXCLUDE                = ofiles tests clickme examples
 USE_MDFILE_AS_MAINPAGE = README.md
+IMAGE_PATH = docs/assets
 
 # Extraction
 EXTRACT_ALL            = YES

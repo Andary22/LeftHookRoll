@@ -1,14 +1,15 @@
-name: Deploy Docs
+name: Deploy and Release Documentation
 
 on:
   push:
     branches: ["main"]
+    tags: ["v*"]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
-  contents: read
+  contents: write # Looks scary but dw guys I know what I am doing (I hope)
   pages: write
   id-token: write
 
@@ -38,3 +39,17 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      #If you want to trigger this, you need to tag your commit via git tag (e.g. git tag v1.x etc)
+      - name: Package Documentation
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd docs/doxygen/html
+          zip -r ../../../documentation.zip .
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: documentation.zip
+          body: "Automated API Documentation for ${{ github.ref_name }}"
