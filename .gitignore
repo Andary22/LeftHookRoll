@@ -4,8 +4,6 @@ lefthookroll
 .vscode/
 ofiles/
 *.log
-# Ignore GitHub workflows
-.github/
-AGENTS.md
+AGENTS.mzd
 doxygen/
 upload_del/
