@@ -52,4 +52,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: documentation.zip
-          body: "Automated API Documentation for ${{ github.ref_name }}"
+          body: |
+            [Automated API Documentation for ${{ github.ref_name }}](https://andary22.github.io/LeftHookRoll/)

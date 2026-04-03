@@ -1,3 +1,8 @@
+[![Code Size](https://img.shields.io/github/languages/code-size/andary22/LeftHookRoll)](https://github.com/andary22/LeftHookRoll)
+[![Documentation](https://img.shields.io/badge/docs-doxygen-blue)](https://andary22.github.io/LeftHookRoll/)
+![C++98](https://img.shields.io/badge/C%2B%2B-98-00599C?logo=c%2B%2B)
+![Platform](https://img.shields.io/badge/platform-linux-lightgrey?logo=linux)
+
 *This project was created as part of the 42 curriculum by Yaman Alrifai, Hamzah Beliah, and Yousef Kitaneh.*
 
 ---
@@ -21,12 +26,12 @@
 - [Contributing](#contributing)
 
 # Description
-LeftHookRoll is a simple HTTP server implemented in C++. \
-It is fully HTTP/1.0 compliant and supports the methods `GET`, `POST`, and `DELETE`, as well as dynamic CGI scripting functionality.\
-The server operates on a single thread while still being fully non-blocking, achieving 100% availability on siege \
+LeftHookRoll is a simple HTTP server implemented in C++.
+It is fully HTTP/1.0 compliant and supports the methods `GET`, `POST`, and `DELETE`, as well as dynamic CGI scripting functionality.
+The server operates on a single thread while still being fully non-blocking, achieving 100% availability on siege
 through the use of I/O multiplexing via `epoll()` and a stateful concurrency machine.
 
-(complete documentation available through Doxygen, see [Documentation section](#documentation)
+(Complete documentation available through Doxygen, see [Documentation section](#documentation))
 
 
 ![dependency graph](docs/assets/main_dep.svg)
@@ -61,10 +66,10 @@ In addition to that, an `autoconf.sh` script is provided to guide you through th
 
 ## Dependencies
 - a C++98 compiler
-- a system that supports `epoll()` (Linux 🐧) \
-*optional*:
-- `doxygen` for generating documentation
-- `graphviz` for generating system graphs in documentation
+- a system that supports `epoll()` (Linux 🐧)
+- *optional*:
+    - `doxygen` for generating documentation
+    - `graphviz` for generating system graphs in documentation
 
 ## Configuration File
 
@@ -159,9 +164,9 @@ server {
 
 ## Documentation
 
-Doxygen-generated documentation is available. To generate it, run `make docs` at the root of the project.\
-Generated documentation will be located in `docs/doxygen/html/index.html`. It includes detailed descriptions \
-of the server's architecture, design decisions, and implementation details, \
+Doxygen-generated documentation is available. To generate it, run `make docs` at the root of the project.
+Generated documentation will be located in `docs/doxygen/html/index.html`. It includes detailed descriptions
+of the server's architecture, design decisions, and implementation details,
 as well as system graphs generated using Graphviz.
 
 ## Tests
@@ -185,14 +190,15 @@ The most helpful resources we used:
 
 ## Tools
 
- - `siege` for load testing and benchmarking the server's performance.
- - [Draw.io](https://app.diagrams.net/) was used to collaborate on the specification and design of the server.
- - github was used for version control, code review, and project management.
+- `siege` for load testing and benchmarking the server's performance.
+- [Draw.io](https://app.diagrams.net/) was used to collaborate on the specification and design of the server.
+- GitHub was used for version control, code review, and project management.
 - `doxygen` and `graphviz` were used to generate real-time documentation and system graphs.
+
 ## AI Usage
 
-AI was used to assist and speed up the code-writing process. To ensure quality and resilient code, testing suites and a rigorous code review process were put in place; no code was written without at least 2 human eyes reviewing it.\
-AI was also used to *proofread* docs such as this document (;  \
+AI was used to assist and speed up the code-writing process. To ensure quality and resilient code, testing suites and a rigorous code review process were put in place; no code was written without at least 2 human eyes reviewing it.
+AI was also used to *proofread* docs such as this document (;
 Architectural design and code structure were all human efforts.
 
 # Contributing
