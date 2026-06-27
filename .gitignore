@@ -6,4 +6,4 @@ ofiles/
 *.log
 AGENTS.mzd
 doxygen/
-upload_del/
+bin/

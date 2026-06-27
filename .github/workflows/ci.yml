@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        container: [debian:latest, fedora:latest]
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Debian Deps.
+        if: contains(matrix.container, 'debian')
+        run: apt-get update && apt-get install -y build-essential bash python3
+        
+      - name: Install Fedora Deps.
+        if: contains(matrix.container, 'fedora')
+        run: dnf install -y gcc-c++ make bash python3
+        
+      - name: Run Tests
+        run: bash tests/tester.sh
