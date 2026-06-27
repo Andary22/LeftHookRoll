@@ -1,4 +1,4 @@
-
+[![CI](https://github.com/Andary22/LeftHookRoll/actions/workflows/ci.yml/badge.svg)](https://github.com/Andary22/LeftHookRoll/actions/workflows/ci.yml)
 [![Code Size](https://img.shields.io/github/languages/code-size/andary22/LeftHookRoll)](https://github.com/andary22/LeftHookRoll)
 [![Documentation](https://img.shields.io/badge/docs-doxygen-blue)](https://andary22.github.io/LeftHookRoll/)
 ![C++98](https://img.shields.io/badge/C%2B%2B-98-00599C?logo=c%2B%2B)
