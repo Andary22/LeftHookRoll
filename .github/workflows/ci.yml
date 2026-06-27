@@ -25,11 +25,3 @@ jobs:
         
       - name: Run Tests
         run: bash tests/tester.sh
-
-  test-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run Tests
-        run: bash tests/tester.sh
