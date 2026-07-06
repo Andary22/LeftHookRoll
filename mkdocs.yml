@@ -9,4 +9,4 @@ nav:
   - How-To Guides: how-to.md
   - API Reference: reference.md
   - Architecture Decisions:
-    - 0001: Concurrency model: adr/0001-concurrency-model.md
+    - "0001: Concurrency model": adr/0001-concurrency-model.md
