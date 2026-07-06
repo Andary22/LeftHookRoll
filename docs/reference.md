@@ -8,3 +8,4 @@ You can also build the reference locally:
 ```bash
 make docs       # builds the documentation
 make docs-clean # removes the generated documentation files
+```
