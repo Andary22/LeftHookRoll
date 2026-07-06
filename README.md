@@ -1,149 +1,207 @@
-# Vale: Your style, our editor [![Build status](https://ci.appveyor.com/api/projects/status/snk0oo6ih1nwuf6r?svg=true)](https://ci.appveyor.com/project/jdkato/vale) [![Go Report Card](https://img.shields.io/badge/%F0%9F%93%9D%20%20go%20report-A%2B-75C46B?color=00ACD7)](https://goreportcard.com/report/github.com/errata-ai/vale) [![GitHub All Releases](https://img.shields.io/github/downloads/errata-ai/vale/total?logo=GitHub&color=ff69b4)](https://github.com/errata-ai/vale/releases) [![Docker Pulls](https://img.shields.io/docker/pulls/jdkato/vale?color=orange&logo=docker&logoColor=white)](https://hub.docker.com/r/jdkato/vale) [![Chocolatey](https://img.shields.io/chocolatey/dt/vale?color=white&label=chocolatey&logo=chocolatey)](https://community.chocolatey.org/packages/vale) [![Homebrew](https://img.shields.io/homebrew/installs/dy/vale?color=yellow&label=homebrew&logo=homebrew)](https://formulae.brew.sh/formula/vale)
+[![CI](https://github.com/Andary22/LeftHookRoll/actions/workflows/ci.yml/badge.svg)](https://github.com/Andary22/LeftHookRoll/actions/workflows/ci.yml)
+[![Code Size](https://img.shields.io/github/languages/code-size/andary22/LeftHookRoll)](https://github.com/andary22/LeftHookRoll)
+[![Documentation](https://img.shields.io/badge/docs-doxygen-blue)](https://andary22.github.io/LeftHookRoll/)
+![C++98](https://img.shields.io/badge/C%2B%2B-98-00599C?logo=c%2B%2B)
+![Platform](https://img.shields.io/badge/platform-linux-lightgrey?logo=linux)
 
-> Enjoying Vale? Please consider writing a user [testimonial][5].
+*This project was created as part of the 42 curriculum by Yaman Alrifai, Hamzah Beliah, and Yousef Kitaneh.*
 
-<p align="center">
-  <b>Vale</b> is a command-line tool that brings code-like linting to prose. It's <b><a href="#mag-at-a-glance-vale-vs-">fast</a></b>, <b>cross-platform</b> (Windows, macOS, and Linux), and <b>highly customizable</b>.
-</p>
+---
 
-<p align="center">
-  <img width="75%" alt="A demo screenshot." src="https://vale.sh/images/vale/mac.png">
-</p>
+**Table of Contents**
+- [Description](#description)
+- [Instructions](#instructions)
+  - [Building and Running](#building-and-running)
+  - [Dependencies](#dependencies)
+  - [Configuration File](#configuration-file)
+    - [Syntax Rules](#syntax-rules)
+    - [Server Block](#server-block)
+    - [Location Block](#location-block)
+    - [CGI Configuration](#cgi-configuration)
+- [Resources](#resources)
+  - [Documentation](#documentation)
+  - [Tests](#tests)
+  - [Informational](#informational)
+  - [Tools](#tools)
+  - [AI Usage](#ai-usage)
+- [Contributing](#contributing)
 
-<div align="center">
-<table>
-<thead>
-<tr>
-<th><a href="https://vale.sh/docs/vale-cli/installation/">Docs</a></th>
-<th><a href="https://studio.vale.sh/">Vale Studio</a></th>
-<th><a href="https://vale.sh/hub/">Package Hub</a></th>
-<th><a href="https://vale.sh/explorer/">Rule Explorer</a></th>
-<th><a href="https://vale.sh/generator/">Config Generator</a></th>
-</tr>
-</thead>
-</table>
-</div>
+# Description
+LeftHookRoll is a simple HTTP server implemented in C++.
+It is fully HTTP/1.0 compliant and supports the methods `GET`, `POST`, and `DELETE`, as well as dynamic CGI scripting functionality.
+The server operates on a single thread while still being fully non-blocking, achieving 100% availability on siege
+through the use of I/O multiplexing via `epoll()` and a stateful concurrency machine.
 
-## :heart: Sponsors
+(Complete documentation available through Doxygen, see [Documentation section](#documentation))
 
-> Hi there! I'm [@jdkato](https://github.com/jdkato), the sole developer of Vale. If you'd like to help me dedicate more time to _developing_, _documenting_, and _supporting_ Vale, feel free to donate through [GitHub Sponsors](https://github.com/sponsors/jdkato) or [Open Collective](https://opencollective.com/vale). Any donation&mdash;big, small, one-time, or recurring&mdash;is greatly appreciated!
 
-### Organizations
+![dependency graph](docs/assets/main_dep.svg)
+*the dependency graph for main.cpp, generated using Doxygen*
 
-<a href="https://opencollective.com/vale/organization/0/website"><img src="https://opencollective.com/vale/organization/0/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/1/website"><img src="https://opencollective.com/vale/organization/1/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/2/website"><img src="https://opencollective.com/vale/organization/2/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/3/website"><img src="https://opencollective.com/vale/organization/3/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/4/website"><img src="https://opencollective.com/vale/organization/4/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/5/website"><img src="https://opencollective.com/vale/organization/5/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/6/website"><img src="https://opencollective.com/vale/organization/6/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/7/website"><img src="https://opencollective.com/vale/organization/7/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/8/website"><img src="https://opencollective.com/vale/organization/8/avatar.svg?avatarHeight=100"></a>
-<a href="https://opencollective.com/vale/organization/9/website"><img src="https://opencollective.com/vale/organization/9/avatar.svg?avatarHeight=100"></a>
+![class diagram](docs/assets/connection_relations.svg)
+*the class relationship diagram for the `Connection` class, the beefiest class in our project*
 
-### Other
+# Instructions
 
-> Thanks to [Appwrite][4] for supporting Vale through their [Open Source Sponsorship program][3].
+## Building and Running
+At the root of the project, run:
 
-<p>
-  <a href="https://appwrite.io/">
-    <img src="https://github.com/errata-ai/vale/assets/8785025/95d4b2f8-a94b-4512-8197-7e80973655cc" width="201px">
-  </a>
-</p>
-
-### Individuals
-
-<a href="https://opencollective.com/vale"><img src="https://opencollective.com/vale/individuals.svg?width=890"></a>
-
-## :boom: Key Features
-
-- [x] **Support for markup**: Vale has a rich understanding of many [markup formats](https://docs.errata.ai/vale/scoping#formats), allowing it to avoid syntax-related false positives and intelligently exclude code snippets from prose-related rules.
-
-- [x] A **highly customizable** [extension system](https://vale.sh/docs/topics/styles/): Vale is capable of enforcing _your style_&mdash;be it a standard [editorial style guide](https://github.com/errata-ai/styles#available-styles) or a custom in-house set of rules (such as those created by [GitLab](https://docs.gitlab.com/ee/development/documentation/testing.html#vale), [Homebrew](https://github.com/Homebrew/brew/tree/master/docs/vale-styles/Homebrew), [Linode](https://www.linode.com/blog/linode/docs-as-code-at-linode/), [CockroachDB](https://github.com/cockroachdb/docs/tree/master/vale), and [Spotify](https://github.com/spotify/backstage)).
-
-- [x] **Easy-to-install**, stand-alone binaries: Unlike other tools, Vale doesn't require you to install and configure a particular programming language and its related tooling (such as Python/pip or Node.js/npm).
-
-See the [documentation](https://vale.sh) for more information.
-
-## :mag: At a Glance: Vale vs. `<...>`
-
-> **NOTE**: While all of the options listed below are open-source (CLI-based) linters for prose, their implementations and features vary significantly. And so, the "best" option will depends on your specific needs and preferences.
-
-### Functionality
-
-| Tool       | Extensible           | Checks          | Supports Markup                                                         | Built With | License      |
-| ---------- | -------------------- | --------------- | ----------------------------------------------------------------------- | ---------- | ------------ |
-| Vale       | Yes (via YAML)       | spelling, style | Yes (Markdown, AsciiDoc, reStructuredText, HTML, XML, Org)              | Go         | MIT          |
-| textlint   | Yes (via JavaScript) | spelling, style | Yes (Markdown, AsciiDoc, reStructuredText, HTML, Re:VIEW)               | JavaScript | MIT          |
-| RedPen     | Yes (via Java)       | spelling, style | Yes (Markdown, AsciiDoc, reStructuredText, Textile, Re:VIEW, and LaTeX) | Java       | Apache-2.0   |
-| write-good | Yes (via JavaScript) | style           | No                                                                      | JavaScript | MIT          |
-| proselint  | No                   | style           | No                                                                      | Python     | BSD 3-Clause |
-| Joblint    | No                   | style           | No                                                                      | JavaScript | MIT          |
-| alex       | No                   | style           | Yes (Markdown)                                                          | JavaScript | MIT          |
-
-The exact definition of "Supports Markup" varies by tool but, in general, it means that the format is understood at a higher level than a regular plain-text file (for example, features like excluding code blocks from spell check).
-
-Extensibility means that there's a built-in means of creating your own rules without modifying the original source code.
-
-### Benchmarks
-
-<table>
-    <tr>
-        <td width="50%">
-            <a href="https://user-images.githubusercontent.com/8785025/97052257-809aa300-1535-11eb-83cd-65a52b29d6de.png">
-                <img src="https://user-images.githubusercontent.com/8785025/97052257-809aa300-1535-11eb-83cd-65a52b29d6de.png" width="100%">
-            </a>
-        </td>
-        <td width="50%">
-            <a href="https://user-images.githubusercontent.com/8785025/97051175-91e2b000-1533-11eb-9a57-9d44d6def4c3.png">
-                <img src="https://user-images.githubusercontent.com/8785025/97051175-91e2b000-1533-11eb-9a57-9d44d6def4c3.png" width="100%">
-            </a>
-        </td>
-    </tr>
-    <tr>
-        <td width="50%">
-          This benchmark has all three tools configured to use their implementations of the <code>write-good</code> rule set and Unix-style output.
-        </td>
-        <td width="50%">This benchmark runs Vale's implementation of <code>proselint</code>'s rule set against the original. Both tools are configured to use JSON output.</td>
-    </tr>
-    <tr>
-        <td width="50%">
-            <a href="https://user-images.githubusercontent.com/8785025/97053402-c5bfd480-1537-11eb-815b-a33ab13a59cf.png">
-                <img src="https://user-images.githubusercontent.com/8785025/97053402-c5bfd480-1537-11eb-815b-a33ab13a59cf.png" width="100%">
-            </a>
-        </td>
-        <td width="50%">
-            <a href="https://user-images.githubusercontent.com/8785025/97055850-7b8d2200-153c-11eb-86fa-d882ce6babf8.png">
-                <img src="https://user-images.githubusercontent.com/8785025/97055850-7b8d2200-153c-11eb-86fa-d882ce6babf8.png" width="100%">
-            </a>
-        </td>
-    </tr>
-    <tr>
-        <td width="50%">
-          This benchmark runs Vale's implementation of Joblint's rule set against the original. Both tools are configured to use JSON output.
-        </td>
-        <td width="50%">This benchmark has all three tools configured to perform only English spell checking using their default output styles.</td>
-    </tr>
-</table>
-
-All benchmarking was performed using the open-source [hyperfine](https://github.com/sharkdp/hyperfine) tool on a MacBook Pro (2.9 GHz Intel Core i7):
-
-```
-hyperfine --warmup 3 '<command>'
+```bash
+    make
+    ./server [config_file]
 ```
 
-The corpus IDs in the above plots&mdash;`gitlab` and `ydkjs`&mdash;correspond to the following files:
+Additional `make` commands:
 
-- A [snapshot](https://gitlab.com/gitlab-org/gitlab/-/tree/7d6a4025a0346f1f50d2825c85742e5a27b39a8b/doc) of GitLab's open-source documentation (1,500 Markdown files).
+```bash
+    make \
+        clean       # removes object files
+        fclean      # removes object files and executables
+        re          # clean rebuild of project
+        docs        # generates documentation using Doxygen
+        docs-clean  # removes generated documentation
+```
 
-- A [chapter](https://raw.githubusercontent.com/getify/You-Dont-Know-JS/1st-ed/es6%20%26%20beyond/ch2.md) from the open-source book _You Don't Know JS_.
+Details and syntax for writing the conf file are covered in [Configuration File section](#configuration-file). A sample conf file is provided in `examples/confs`.
+In addition to that, an `autoconf.sh` script is provided to guide you through the process of setting up a configuration file.
 
-## :page_facing_up: License
+## Dependencies
+- a C++98 compiler
+- a system that supports `epoll()` (Linux 🐧)
+- *optional*:
+    - `doxygen` for generating documentation
+    - `graphviz` for generating system graphs in documentation
 
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B21090%2Fgithub.com%2Ferrata-ai%2Fvale.svg?type=large)](https://app.fossa.com/projects/custom%2B21090%2Fgithub.com%2Ferrata-ai%2Fvale?ref=badge_large)
+## Configuration File
 
-[1]: https://www.digitalocean.com/open-source/credits-for-projects
-[2]: https://studio.vale.sh/
-[3]: https://appwrite.io/oss-fund
-[4]: https://appwrite.io/
-[5]: https://page.famewall.io/vale
+The server is configured via a text file following Nginx-inspired syntax.
+
+### Syntax Rules
+- **Blocks** are enclosed in curly braces `{}`. Everything lives inside a `server` block.
+- **Directives** end with a semicolon `;`.
+- **Comments** start with `#` and extend to the end of the line.
+- **Whitespace** is ignored (spaces, tabs, newlines).
+
+### Server Block
+
+```nginx
+server {
+    # server directives here
+}
+```
+
+| Directive | Syntax | Example |
+|-----------|--------|---------|
+| `listen` | `listen <port>;` or `listen <ip>:<port>;` | `listen 8080;` / `listen 127.0.0.1:8080;` |
+| `server_name` | `server_name <name>;` | `server_name example.com;` |
+| `client_max_body_size` | `client_max_body_size <size>;` | `client_max_body_size 10M;` |
+| `error_page` | `error_page <code> <path>;` | `error_page 404 /errors/404.html;` |
+| `location` | `location <path> { ... }` | `location /api { ... }` |
+
+
+**`client_max_body_size` suffixes:** `k`/`K` (kilobytes), `m`/`M` (megabytes), `g`/`G` (gigabytes). Plain number = bytes.
+
+### Location Block
+
+Defined inside a `server` block. Matched by longest-prefix against the request URL.
+
+```nginx
+location /path {
+    # location directives here
+}
+```
+
+| Directive | Syntax | Example |
+|-----------|--------|---------|
+| `root` | `root <path>;` | `root /var/www/html;` |
+| `methods` | `methods <METHOD> [METHOD ...];` | `methods GET POST DELETE;` |
+| `autoindex` | `autoindex <on\|off>;` | `autoindex on;` |
+| `index` | `index <file>;` | `index index.html;` |
+| `upload_store` | `upload_store <path>;` | `upload_store /var/www/uploads;` |
+| `return` | `return <code> <url>;` | `return 301 https://new-site.com;` |
+| `cgi_interpreter` | `cgi_interpreter <path> <.ext>;` | `cgi_interpreter /usr/bin/python3 .py;` |
+
+### CGI Configuration
+
+CGI is configured per-location using the `cgi_interpreter` directive. Each directive maps a file extension to an interpreter binary. Multiple `cgi_interpreter` directives can be specified in a single location block to support different script types.
+
+```nginx
+server {
+    listen 8080;
+    server_name localhost;
+    client_max_body_size 1M;
+
+    error_page 404 /errors/404.html;
+    error_page 500 /errors/500.html;
+
+    location / {
+        root /var/www/html;
+        methods GET;
+        index index.html;
+        autoindex off;
+    }
+
+    location /uploads {
+        root /var/www;
+        methods GET POST DELETE;
+        upload_store /var/www/uploads;
+    }
+
+    location /cgi-bin {
+        root /var/www;
+        methods GET POST;
+        cgi_interpreter /usr/bin/python3 .py;
+        cgi_interpreter /usr/bin/perl .pl;
+        cgi_interpreter /bin/sh .sh;
+    }
+
+    location /old-page {
+        return 301 https://new-site.com/new-page;
+    }
+}
+```
+
+# Resources
+
+## Documentation
+
+Doxygen-generated documentation is available. To generate it, run `make docs` at the root of the project.
+Generated documentation will be located in `docs/doxygen/html/index.html`. It includes detailed descriptions
+of the server's architecture, design decisions, and implementation details,
+as well as system graphs generated using Graphviz.
+
+## Tests
+
+A suite of tests is provided in the `tests` directory, to run:
+
+```bash
+./tests/tester.sh [help|standard|valgrind]
+```
+
+## Informational
+
+The most helpful resources we used:
+- [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
+- [HTTP 1.0 RFC](https://datatracker.ietf.org/doc/html/rfc1945)
+- [HTTP in depth](https://cs.fyi/guide/http-in-depth)
+- [CGI RFC](https://datatracker.ietf.org/doc/html/rfc3875)
+- [Understanding epoll](https://copyconstruct.medium.com/the-method-to-epolls-madness-d9d2d6378642)
+- [Mozilla's HTTP docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference)
+- [nginx conf file syntax](https://nginx.org/en/docs/beginners_guide.html#conf_structure) (as inspiration)
+
+## Tools
+
+- `siege` for load testing and benchmarking the server's performance.
+- [Draw.io](https://app.diagrams.net/) was used to collaborate on the specification and design of the server.
+- GitHub was used for version control, code review, and project management.
+- `doxygen` and `graphviz` were used to generate real-time documentation and system graphs.
+
+## AI Usage
+
+AI was used to assist and speed up the code-writing process. To ensure quality and resilient code, testing suites and a rigorous code review process were put in place; no code was written without at least 2 human eyes reviewing it.
+AI was also used to *proofread* docs such as this document (;
+Architectural design and code structure were all human efforts.
+
+# Contributing
+
+Although this project was created for educational purposes, contributions and questions are welcome. If you have any suggestions or questions, feel free to open an issue, submit a pull request, or reach out. The code standards we followed are detailed [here](docs/contributing_guidelines.md).
