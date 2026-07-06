@@ -7,3 +7,4 @@ ofiles/
 AGENTS.mzd
 doxygen/
 bin/
+venv
