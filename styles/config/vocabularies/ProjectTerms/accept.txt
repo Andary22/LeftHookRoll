@@ -1,0 +1,15 @@
+Doxygen
+doxygen
+CGI
+RAII
+IPC
+STL
+namespace
+namespaces
+snake_case
+const
+utils
+linux
+Eid
+config
+destructors

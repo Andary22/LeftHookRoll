@@ -8,15 +8,15 @@ always be named according to the class name.
 
 ## coding practices:
 - **RAII.**
-	- in short; RAII (Resource Acquisition Is Initialization) means that you should use constructors and destructors to manage resources, and avoid manual memory management as much as possible. (an object allocates a string in its constructor, and deallocates it in its destructor, so you don't have to worry about it)
-- Orthodox Cannonical Form.
+	- in short; RAII (Resource Acquisition Is Initialization) means that you should use constructors and destructors to manage resources, and avoid manual memory management as much as possible. (an object allocates a string in its constructor, and de-allocates it in its destructor, so you don't have to worry about it)
+- Orthodox Canonical Form.
 - Use STL for data structures whenever possible.
 - never swallow exceptions, and keep exception propagation minimal; handle the exception at the first boundary where you can actually do something about it.
 - Optimization, follow best coding standards for example:
 	- no unnecessary copies; pass by **const reference** when possible.
 	- header separation (.hpp for declarations, .cpp for definitions)
 	- free your functions when possible, and group them in namespaces.
-		- a free function is function that is not a member of a class, it helps to:
+		- a free function is function that's not a member of a class, it helps to:
 			- increase encapsulation
 			- keep classes small and focused
 			- make code more testable.
