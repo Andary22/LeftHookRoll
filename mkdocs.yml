@@ -1,0 +1,12 @@
+site_name: LeftHookRoll
+theme:
+  name: material
+  palette:
+    scheme: slate
+nav:
+  - Home: index.md
+  - Tutorial: usage_example.md
+  - How-To Guides: how-to.md
+  - API Reference: reference.md
+  - Architecture Decisions:
+    - 0001: Concurrency model: adr/0001-concurrency-model.md
