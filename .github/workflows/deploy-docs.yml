@@ -3,7 +3,7 @@ name: Deploy and Release Documentation
 on:
   push:
     branches: ["main"]
-    tags: ["v*"]
+  tags: ["v*"]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -18,9 +18,9 @@ jobs:
   lint-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Vale Linter
-        uses: errata-ai/vale-action@reviewdog
+        uses: errata-ai/vale-action@83e4bc6e8b4ed76751c3a64790930f30509a259c # reviewdog
         with:
           files: docs/
           reporter: github-check
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Install System Dependencies (Doxygen, Graphviz)
         run: |
@@ -39,7 +39,7 @@ jobs:
           sudo apt-get install -y doxygen graphviz
 
       - name: Install Python Dependencies (MkDocs)
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.1
         with:
           python-version: 3.x
       - run: pip install mkdocs-material
@@ -51,22 +51,21 @@ jobs:
         run: mkdocs build
 
       - name: Merge Doxygen into MkDocs
-        # Injects the low-level C++ reference into the static MkDocs site
         run: |
           mkdir -p site/api
           cp -r docs/doxygen/html/* site/api/
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v4.0.0
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
-          path: 'site' # Uploading the unified MkDocs directory
+          path: 'site' 
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
 
       - name: Package Documentation
         if: startsWith(github.ref, 'refs/tags/')
@@ -76,7 +75,7 @@ jobs:
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.0.8
         with:
           files: documentation.zip
           body: |
