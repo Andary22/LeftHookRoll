@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Vale Linter
-        uses: errata-ai/vale-action@83e4bc6e8b4ed76751c3a64790930f30509a259c # reviewdog
+        uses: vale-cli/vale-action@85f9f7f2c5f449ac0ae5b66662961bae3f77ca6a # v2.1.2
         with:
           files: docs/
           reporter: github-check
