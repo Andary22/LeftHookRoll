@@ -9,14 +9,14 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
-  contents: write # Required for releases and Pages
-  pages: write
-  id-token: write
-  pull-requests: write # Required if Vale reports to PRs
+  contents: read
 
 jobs:
   lint-docs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write 
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Vale Linter
@@ -29,6 +29,10 @@ jobs:
   deploy:
     needs: lint-docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+      pages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
